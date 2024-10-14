@@ -31,10 +31,10 @@ def animate_frames(
       cmap: the colormap used display the image (via matplotlib); can be 
         a matplotlib cmap object or a string for specifying one. Ignored
         if frames are in RGB(A)
-        
+    
     RETURNS:
       matplotlib figure object representing the resulting plot of frame
-      
+    
     NOTES:
       In Jupyter notebook, precede with magic command "%matplotlib notebook"
       In Jupyter lab, precede with magic command "%matplotlib ipympl"
@@ -45,7 +45,7 @@ def animate_frames(
             stop = start + (len(frames) - 1) * step
         else:
             stop = len(frames) - 1
-    
+
     # static information about the figure not modified by frame index
     fig, ax = plt.subplots()
     ax.set_position([0, 0, 1, 1], which='both')
@@ -54,7 +54,7 @@ def animate_frames(
     # initial view
     idx0 = 0 if subsampled else start
     img_obj = ax.imshow(frames[idx0], cmap=cmap)
-    
+
     # inner function to display the figure
     # x and y are actually redundant. This is a trick to link the Play
     # widget to the IntSlider widget
@@ -62,13 +62,13 @@ def animate_frames(
         if subsampled:
             y = (y - start) // step
         img_obj.set_data(frames[y])
-    
+
     # interactively drive the inner function
     play = widgets.Play(description="n", min=start, max=stop, step=step, value=0)
     slider = widgets.IntSlider(description="n", min=start, max=stop, step=step, value=0)
     widgets.jslink((play, 'value'), (slider, 'value'))
     widgets.interact(f, x=play, y=slider)
-    
+
     # return figure object so that it can be saved, closed, etc
     return fig
 
@@ -87,43 +87,43 @@ def animate_video(reader, start=0, stop=None, step=1, cmap="gray", **kwargs):
       cmap: the colormap used display the image (via matplotlib); can be 
         a matplotlib cmap object or a string for specifying one. Ignored
         if video frames are in RGB(A)
-        
+    
     RETURNS:
       1/ matplotlib figure object representing the resulting plot of frame
       2/ the imageio reader object of the video (so that it can be closed
         properly after use)
-      
+    
     NOTES:
       In Jupyter notebook, precede with magic command "%matplotlib notebook"
       In Jupyter lab, precede with magic command "%matplotlib ipympl"
     '''
-    
+
     # try to create imageio reader if user does not supply the reader object
     if not isinstance(reader, imageio.core.format.Format.Reader):
         reader = imageio.get_reader(reader)
-    
+
     # resolve stop value
     if stop is None:
         stop = reader.count_frames() - 1
-    
+
     # static information about the figure not modified by frame index
     fig, ax = plt.subplots()
     ax.set_position([0, 0, 1, 1], which='both')
     ax.set_axis_off()
     img_obj = ax.imshow(reader.get_data(0, **kwargs), cmap=cmap)
-    
+
     # inner function to display the figure
     # x and y are actually redundant. This is a trick to link the Play
     # widget to the IntSlider widget
     def f(x, y):
         img_obj.set_data(reader.get_data(y, **kwargs))
-    
+
     # interactively drive the inner function
     play = widgets.Play(description="n", min=start, max=stop, step=step, value=0)
     slider = widgets.IntSlider(description="n", min=start, max=stop, step=step, value=0)
     widgets.jslink((play, 'value'), (slider, 'value'))
     widgets.interact(f, x=play, y=slider)
-    
+
     # return figure/reader object so that they can be saved, closed, etc
     return fig, reader
 

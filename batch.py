@@ -41,7 +41,7 @@ def _fold_start_stop(start, stop, step, inner_dict):
       step: the step value of .islice() in the iterator being called
       inner_dict: dictionary containing the start, stop, step values of the
         .islice() in the calling function
-        
+    
     RETURNS:
       a 2-tuple of dictionary: first dictionary contains the updated 
       start, stop value for the .islice() in the function being called, and
@@ -49,20 +49,20 @@ def _fold_start_stop(start, stop, step, inner_dict):
     '''
     # copy to avoid modifying original inner_dict
     inner_dict = inner_dict.copy()
-    
+
     # modify stop value
     stop_in = inner_dict.pop(stop, None)
     if stop_in is not None:
         stop = start + step * stop_in if (stop is None) else min(
             start + step * stop_in, stop
         )
-    
+
     # modify start value
     start = start + step * inner_dict.pop("start", 0)
-    
+
     # packing output dictionary
     outer_dict = {"start": start, "stop": stop}
-    
+
     return (outer_dict, inner_dict)
 
 def _flattened_yield(in_sequence):
@@ -72,7 +72,7 @@ def _flattened_yield(in_sequence):
     
     ARGUMENTS: 
       in_sequence: an arbitrarily nested iterable
-      
+    
     YIELDS value from the corresponding flattened structure
     
     NOTE: for the purpose of this function, string (and its subclasses) are
@@ -95,11 +95,11 @@ def _flattened_list(in_sequence):
     
     ARGUMENTS: 
       in_sequence: an arbitrarily nested iterable
-      
+    
     RETURNS:
         a flattened python list (with each element a shadow copy from the 
         corresponding element in in_sequence)
-        
+    
     NOTES: 
       1/ for the purpose of this function, string (and its subclasses) are
         treated as atomic and NOT iterable
@@ -113,20 +113,20 @@ class ObjBatchBase(abc.ABC):
     Abstract base class for batch processing classes
     NOTE: has CONCRETE methods nonetheless!
     '''
-    
+
     defaults = dict()
-    
+
     def __init__(self):
-        
+
         if config_file is None:
             self.copy_defaults()
         else:
             self.load_config(config_file)
-        
+
         self.ops = []
         self.params = []
         self.kwparams = []
-    
+
     def load_config(self, config_file, *, partial=False, **kwargs):
         '''
         load the given json file as config (previous config is discarded)
@@ -141,7 +141,7 @@ class ObjBatchBase(abc.ABC):
         '''
         with open(config_file, "r") as infile:
             new_config = json.load(infile, **kwargs)
-            
+
         if partial:
             for key, subdict in new_config:
                 if key in self.config:
@@ -150,7 +150,7 @@ class ObjBatchBase(abc.ABC):
                     self.config[key] = subdict
         else:
             self.config = new_config
-    
+
     def copy_defaults(self):
         '''
         copy the class-level defined defaults as the configuration of the 
@@ -161,7 +161,7 @@ class ObjBatchBase(abc.ABC):
         self.config = dict()
         for section, options in self.defaults.items():
             self.config[section] = options.copy()
-    
+
     def save_config(self, config_file, **kwargs):
         '''
         Save the current configuation into json file
@@ -171,10 +171,10 @@ class ObjBatchBase(abc.ABC):
           (**kwargs): the remaining keyword arguments are passed to json.dump()
             that serialize and write the json strings
         '''
-    
+
         with open(config_file, "w") as outfile:
             json.dump(self.config, outfile, **kwargs)
-    
+
     def get_option(self, section, option):
         '''
         get the current value of a section or an option in the configuration
@@ -201,7 +201,7 @@ class ObjBatchBase(abc.ABC):
             return self.config[section].copy()
         else:
             return self.config[section][option]
-    
+
     def set_option(self, section, option, value, *, warn=False, stderr=print):
         '''
         set the value of a section or an option in the configuration
@@ -239,7 +239,7 @@ class ObjBatchBase(abc.ABC):
                         "option {} in section {}".format(section, option)
                     )
                 self.config[section][option] = value
-    
+
     def insert_post_ops(self, func, params=None, kwparams=None, index=None):
         '''
         insert a new post-processing operation to the post-processing pipeline
@@ -258,17 +258,17 @@ class ObjBatchBase(abc.ABC):
             params = []
         if kwparams is None:
             kwparams = dict()
-            
+
         if index is None:
             self.ops.append(func)
             self.params.append(params.copy())
             self.kwparams.append(kwparams.copy())
-        
+
         else:
             self.ops.insert(i, func)
             self.params.insert(i, params.copy())
             self.kwparams.insert(i, kwparams.copy())
-    
+
     def remove_post_ops(self, func):
         '''
         remove a post-processing operation from the post-processing pipeline
@@ -286,7 +286,7 @@ class ObjBatchBase(abc.ABC):
             self.ops.pop(func)
             self.params.pop(func)
             self.kwparams.pop(func)
-    
+
     def replace_post_ops(
         self, index, new_func=None, new_params=None, new_kwparams=None
     ):
@@ -305,22 +305,22 @@ class ObjBatchBase(abc.ABC):
           new_kwparams: the new keyword parameters (keyword arguments) 
             to replace the original keyword parameters of post-processing 
             function. If None the original keyword parameters are UNCHANGED
-            
+        
         NOTES:
           Both new_params and new_kwparams are shallow copied
         '''
         if callable(index):
             index = self.ops.index(index)
-        
+
         if new_func is not None:
             self.ops[index] = new_func
-        
+
         if new_params is not None:
             self.params[index] = new_params.copy()
-            
+
         if new_kwparams is not None:
             self.kwparams[index] = new_kwparams.copy()
-    
+
     def clear_post_ops(self):
         '''
         remove all post-processing function from the post-processing pipeline
@@ -330,11 +330,11 @@ class ObjBatchBase(abc.ABC):
         self.ops.clear()
         self.params.clear()
         self.kwparams.clear()
-    
+
     @abc.abstractmethod
     def infer_post_ops(self):
         pass
-    
+
     @abc.abstractmethod
     def __call__(self):
         pass
@@ -514,7 +514,7 @@ class SingleObjBatch(ObjBatchBase):
     -m vtrack.batch) or when the class is used as a backend to the graphical
     user interface (GUI) created from vtrack.gui
     '''
-    
+
     # class level default options
     defaults = {
         "modes": {
@@ -559,7 +559,7 @@ class SingleObjBatch(ObjBatchBase):
             "distance": "total distance traveled = {:.0f}"
         }
     }
-    
+
     def __init__(
         self, config_file=None, 
         post_ops=None, post_params=None, post_kwparams=None
@@ -582,22 +582,22 @@ class SingleObjBatch(ObjBatchBase):
             self.copy_defaults()
         else:
             self.load_config(config_file)
-            
+
         if post_ops is None:
             self.ops = []
         else:
             self.ops = [ __ for __ in post_ops ]
-        
+
         if post_params is None:
             self.params = [ [] for __ in self.ops ]
         else:
             self.params = [ __ for __ in post_params ]
-            
+
         if post_kwparams is None:
             self.kwparams = [ dict() for __ in self.ops ]
         else:
             self.kwparams = [ __ for __ in post_kwparams ]
-    
+
     @staticmethod
     def _glob_generator(in_folder, out_folder, glob, fig_suffix):
         "iterate through input file and output name in non-re mode"
@@ -608,45 +608,45 @@ class SingleObjBatch(ObjBatchBase):
             fig_path = out_path.with_suffix(fig_suffix)
             vid_path = out_path.with_suffix(".mp4")
             yield (in_path, csv_path, fig_path, vid_path)
-    
+
     @staticmethod
     def _re_generator(
         in_folder, out_folder, in_pattern, out_pattern, fig_suffix
     ):
         "iterate through input file and output name in re mode"
         in_pattern = r".*" if (in_pattern is None) else in_pattern
-        
+
         if out_pattern is None:
             out_pattern = [ r"\g<0>" ] * 3
         elif type(out_pattern)==str:
             out_pattern = [ out_pattern ] * 3
-        
+
         in_rgx = re.compile(in_pattern)
-        
+
         for in_path in pathlib.Path(in_folder).iterdir():
             if in_rgx.match(in_path.name):
-                
+
                 csv_path = pathlib.Path(out_folder) / in_rgx.sub(
                     out_pattern[0], in_path.name
                 )
                 csv_path = csv_path.with_suffix(".csv")
-                
+
                 fig_path = pathlib.Path(out_folder) / in_rgx.sub(
                     out_pattern[1], in_path.name
                 )
                 fig_path = fig_path.with_suffix(fig_suffix)
-                
+
                 vid_path = pathlib.Path(out_folder) / in_rgx.sub(
                     out_pattern[2], in_path.name
                 )
                 vid_path = vid_path.with_suffix(".mp4")
-                
+
                 yield (in_path, csv_path, fig_path, vid_path)
-    
+
     @staticmethod
     def _gen_paths(*file_paths, junction="~"):
         "generate filename that avoids conflict with existing files"
-        
+
         file_paths_0 = [ pathlib.Path(__) for __ in file_paths ]
         file_paths = file_paths_0
         i = 0
@@ -656,9 +656,9 @@ class SingleObjBatch(ObjBatchBase):
                 __.with_name(__.stem + junction + str(i) + __.suffix)
                 for __ in file_paths_0
             ]
-        
+
         return tuple(file_paths)
-    
+
     def infer_post_ops(self, *, clear=True):
         '''
         infer post-processing operations to perform based on the "postprocess" 
@@ -666,30 +666,30 @@ class SingleObjBatch(ObjBatchBase):
         
         ARGUMENTS:
           clear: whether to clear the existing post-processing pipeline
-          
+        
         RETURNS None
         
         SIDE EFFECTS: the post-processing pipeline is modified in-place
         '''
-        
+
         # clear the existing postprocessing pipeline if instructed
         if clear:
             self.clear_post_ops()
-        
+
         # nothing to do!
         if "postprocess" not in self.config:
             return
-        
+
         # iterate through dictionary; order matters!
         for key, val in self.config["postprocess"].items():
-            
+
             # hook for remove_small_objects()
             if key=="remove_spots":
                 if type(val)==int: # min_size is specified
                     self.insert_post_ops(morph.remove_small_objects, [ val ])
                 elif val: # use default
                     self.insert_post_ops(morph.remove_small_objects)
-            
+
             # hook for binary_opening()
             if key=="remove_thins":
                 if type(val)==int: # thickness is specified
@@ -698,7 +698,7 @@ class SingleObjBatch(ObjBatchBase):
                     )
                 elif val: # use default otherwise
                     self.insert_post_ops(morph.binary_opening)
-    
+
     def _run(self, filename_iterator, summary_path, *, stdout=print):
         '''
         execute batch processing
@@ -717,19 +717,19 @@ class SingleObjBatch(ObjBatchBase):
           stdout: function to write verbose messages to
         
         RETURNS None
-    
+        
         SIDE EFFECTS:
           files output to out_folder
         '''
-        
+
         verbose = self.config["modes"]["verbosity"]
-        
+
         # copy config into local alias; fill in missing sections if needed
         eager = self.config["modes"]["eager"]
         smooth = self.config["modes"]["smoothen"]
         interact = self.config["modes"]["interactive"]
         overwrite = self.config["modes"]["overwrite"]
-        
+
         make_fig = self.config["output"]["figure"]
         make_csv = self.config["output"]["details"]
         make_vid = self.config["output"]["video"]
@@ -737,7 +737,7 @@ class SingleObjBatch(ObjBatchBase):
         rec_thres = self.config["output"]["record_threshold"]
         rec_conv = self.config["output"]["record_conversion"]
         rec_boxes = self.config["output"]["record_boxes"]
-        
+
         start = self.config["params"]["start"]
         stop = self.config["params"]["stop"]
         step = self.config["params"]["step"]
@@ -745,18 +745,18 @@ class SingleObjBatch(ObjBatchBase):
         window = self.config["params"]["window"]
         man_thres = self.config["params"]["manual_threshold"]
         intvl = self.config["params"]["sample_interval"]
-        
+
         if make_fig:
             title_template = self.config["template_texts"]["main_title"]
             time_template = self.config["template_texts"]["proportion"]
             dist_template = self.config["template_texts"]["distance"]
-        
+
         bg_kwargs = self.config.get("calc_background", dict())
         th_kwargs = self.config.get("calc_threshold", dict())
         mot_kwargs = self.config.get("assemble_motion_data", dict())
         plt_kwargs = self.config.get("plot_path", dict())
         vid_kwargs = self.config.get("export_overlaid_video", dict())
-        
+
         if not eager:
             bg_kwargs = _fold_start_stop(start, stop, step, bg_kwargs)
             if "step" in bg_kwargs[1]:
@@ -764,11 +764,11 @@ class SingleObjBatch(ObjBatchBase):
             th_kwargs = _fold_start_stop(start, stop, step, th_kwargs)
             if "step" in th_kwargs[1]:
                 th_kwargs[0]["step"] = th_kwargs[1].pop("step")
-        
+
         # saving all summary information
         if make_smry:
             all_summary = []
-        
+
         # setup variables whose meaning depends on interaction mode
         if interact:
             known_length = self.config["params"]["pixel_length"]
@@ -815,25 +815,25 @@ class SingleObjBatch(ObjBatchBase):
             inbox_path = None if (inbox is None) else (
                 vertices_to_path(inbox) # inbox in physical coordinates
             )
-        
+
         for (in_path, csv_path, fig_path, vid_path) in filename_iterator:
-            
+
             if verbose: stdout("Processing file '{}'...".format(in_path.name))
             reader = imageio.get_reader(in_path)
             meta = reader.get_meta_data()
             fps = meta["fps"] / step  # effective fps
             sub_step = max(1, int(intvl * fps))
-            
+
             if eager:
-            
+
                 if verbose > 1: stdout("  building grayscaled frames...")
                 frames = build_grayscaled(reader, step, start, stop, cropbox0)
-                
+
                 if verbose > 1: stdout("  calculating background frame...")
                 bg_frame = calc_background(
                     frames, sub_step, cropbox=None, **bg_kwargs
                 )
-                
+
                 if interact:
                     if n_crop is not None:
                         crop_pts = mark_image(
@@ -851,10 +851,10 @@ class SingleObjBatch(ObjBatchBase):
                         bg_cropped = bg_frame
                 else:
                     bg_cropped = bg_frame
-                
+
                 if verbose > 1: stdout("  building subtracted frames...")
                 frames = build_subtracted(frames, bg_frame, cropbox=cropbox)
-                
+
                 if man_thres is None:
                     if verbose > 1: stdout("  calculating threshold...")
                     thres = calc_threshold(
@@ -862,7 +862,7 @@ class SingleObjBatch(ObjBatchBase):
                     )
                 else:
                     thres = man_thres
-                
+
                 # NOTE: maskbox is expressed in pixel coordinates
                 if interact:
                     if n_mask is not None:
@@ -879,31 +879,23 @@ class SingleObjBatch(ObjBatchBase):
                     mask = vertices_to_mask(
                         maskbox, image=bg_frame, cropbox=cropbox0
                     )
-                
+
                 if verbose > 1: stdout("  building binary frames...")
                 frames = build_thresholded(
                     frames, thres, cropbox=None, mask=mask
                 )
-                
+
                 if self.ops: # post-processing exists
                     if verbose > 1: stdout("  post-processing frames...")
                     frames = build_postprocessed(
                         frames, self.ops, self.params, self.kwparams
                     )
-                
-                if interact:
-                    segment = mark_image(
-                        bg_cropped, 2, False, 
-                        title = len_template.format(in_path.name), 
-                        **mark_kwargs
-                    )
-                    px2real = calc_pixel_to_phys(segment, known_length)
-                
+
                 if verbose > 1: stdout("  computing centroids...")
-                coords = compute_centroids(frames, px2real)
-            
+                coords = compute_centroids(frames)
+
             else: # "lazy" mode
-                
+
                 if verbose > 1: stdout(
                     "  generating grayscaled frames to calculate background..."
                 )
@@ -913,7 +905,7 @@ class SingleObjBatch(ObjBatchBase):
                         **bg_kwargs[0]
                     ), cropbox=None, **bg_kwargs[1]
                 )
-                
+
                 if interact:
                     if n_crop is not None:
                         crop_pts = mark_image(
@@ -932,7 +924,7 @@ class SingleObjBatch(ObjBatchBase):
                 else:
                     cropbox = cropbox0
                     bg_cropped = bg_frame
-                
+
                 if man_thres is None:
                     if verbose > 1: stdout(
                         "  generating subtracted frames " + 
@@ -946,7 +938,7 @@ class SingleObjBatch(ObjBatchBase):
                     )
                 else:
                     thres = man_thres
-                
+
                 # NOTE: maskbox is expressed in pixel coordinates
                 if interact:
                     if n_mask is not None:
@@ -963,17 +955,9 @@ class SingleObjBatch(ObjBatchBase):
                     mask = vertices_to_mask(
                         maskbox, image=bg_frame, cropbox=cropbox0
                     )
-                
-                if interact:
-                    segment = mark_image(
-                        bg_cropped, 2, False, 
-                        title = len_template.format(in_path.name), 
-                        **mark_kwargs
-                    )
-                    px2real = calc_pixel_to_phys(segment, known_length)
-                
+
                 if self.ops: # post-processing exists
-                    
+
                     if verbose > 1: stdout(
                         "  generating post-processed frames" + 
                         " to compute centroids..."
@@ -984,11 +968,11 @@ class SingleObjBatch(ObjBatchBase):
                             self.ops, self.params, self.kwparams,
                             step, start, stop,
                             cropbox=cropbox, mask=mask
-                        ), px2real
+                        )
                     )
-                
+
                 else: # no post-processing needed
-                    
+
                     if verbose > 1: stdout(
                         "  generating binary frames to compute centroids..."
                     )
@@ -996,11 +980,19 @@ class SingleObjBatch(ObjBatchBase):
                         iter_thresholded(
                             reader, bg_cropped, thres, step, start, stop,
                             cropbox=cropbox, mask=mask
-                        ), px2real
+                        )
                     )
-                
+
             # eager and lazy modes merge back here
-            
+
+            if interact:
+                segment = mark_image(
+                    bg_cropped, 2, False, 
+                    title = len_template.format(in_path.name), 
+                    **mark_kwargs
+                )
+                px2real = calc_pixel_to_phys(segment, known_length)
+
             if interact and (n_in is not None):
                 inbox = mark_image(
                     bg_cropped, n_in, convex, 
@@ -1010,16 +1002,16 @@ class SingleObjBatch(ObjBatchBase):
                 # inbox in physical coordinates
                 inbox = convert_to_physical(inbox, px2real)
                 inbox_path = vertices_to_path(inbox)
-            
+
             if verbose > 1: stdout("  computing motion data...")   
             dt = 1/fps
             data, header, summary = assemble_motion_data(
-                coords, dt, marked_region=inbox_path, smooth=smooth,
+                coords, px2real, dt, marked_region=inbox_path, smooth=smooth,
                 window=window, summary=True, **mot_kwargs
             )
-            
+
             if verbose > 1: stdout("  generating output...")
-            
+
             if not overwrite:
                 paths = []
                 if make_csv: paths.append(csv_path)
@@ -1029,10 +1021,10 @@ class SingleObjBatch(ObjBatchBase):
                 if make_vid: vid_path = paths.pop()
                 if make_fig: fig_path = paths.pop()
                 if make_csv: csv_path = paths.pop()
-            
+
             if make_csv:
                 write_csv(csv_path, data, header)
-            
+
             if make_fig:
                 info_list = []
                 if not _isnan(summary.proportion):
@@ -1045,7 +1037,7 @@ class SingleObjBatch(ObjBatchBase):
                     info_list=info_list, save_as=fig_path, close=True, 
                     **plt_kwargs
                 )
-            
+
             if make_vid:
                 box = cropbox if interact else cropbox0
                 box = (0, 0) if (box is None) else box
@@ -1054,21 +1046,21 @@ class SingleObjBatch(ObjBatchBase):
                     data[:, 1:3], px2real, box, 
                     fps=fps/step, **vid_kwargs
                 )
-            
+
             if make_smry:
                 out_row = [ in_path.name ]
                 out_row.extend(summary)
                 if rec_thres: out_row.append(thres)
                 if rec_conv: out_row.append(px2real)
                 if rec_boxes: 
-                    
+
                     # cropbox
                     if interact:
                         tmp = _flattened_list(cropbox)
                     else:
                         tmp = _flattened_list(cropbox0)
                     out_row.extend(tmp)
-                    
+
                     # maskbox
                     tmp = _flattened_list(maskbox)
                     out_row.extend(tmp)
@@ -1080,7 +1072,7 @@ class SingleObjBatch(ObjBatchBase):
                         out_row.extend(
                             ["" for __ in range(2 * n_mask - len(tmp))]
                         )
-                    
+
                     # innerbox
                     tmp = _flattened_list(inbox)
                     out_row.extend(tmp)
@@ -1088,16 +1080,16 @@ class SingleObjBatch(ObjBatchBase):
                         out_row.extend(
                             ["" for __ in range(2 * n_in - len(tmp))]
                         )
-                    
+
                 all_summary.append(out_row)
-        
+
         ## END OF FILE ITERATION
-        
+
         if make_smry:
             if verbose > 1: stdout("writing summary file...")
             if not overwrite:
                  summary_path, *_ = self._gen_paths(summary_path)
-                 
+
             # create proper header
             header = ["file name", "total distance", "in-region time"]
             if rec_thres:
@@ -1105,30 +1097,30 @@ class SingleObjBatch(ObjBatchBase):
             if rec_conv:
                 header.append("unit conversion")
             if rec_boxes:
-            
+
                 # cropbox
                 tmp = cropbox if interact else cropbox0
                 if tmp is None:
                     header.append("cropbox")
                 else:
                     header.extend(["cropbox", "", "", ""])
-                
+
                 # maskbox
                 header.append("maskbox")
                 if mask_crop and (n_crop is not None):
                     header.extend(["" for __ in range(2 * n_crop - 1)])
                 elif n_mask is not None:
                     header.extend(["" for __ in range(2 * n_mask - 1)])
-                
+
                 # innerbox
                 header.append("innerbox")
                 if n_in is not None:
                     header.extend(["" for __ in range(2 * n_in - 1)])
-            
+
             write_csv(summary_path, all_summary, header)
-        
+
         return
-    
+
     def __call__(
         self, in_folder, out_folder, in_pattern=None, out_pattern=None,
         summary_name="summary.csv", *, stdout=print
@@ -1163,16 +1155,16 @@ class SingleObjBatch(ObjBatchBase):
         SIDE EFFECTS:
           files output to out_folder
         '''
-        
+
         # check if the in_folder and out_folder are actual directories
         if not pathlib.Path(in_folder).is_dir():
             raise FileNotFoundError("'{}' is not a folder".format(in_folder))
         if not pathlib.Path(out_folder).is_dir():
             raise FileNotFoundError("'{}' is not a folder".format(out_folder))
-        
+
         if self.config["modes"]["verbosity"] > 1:
             stdout("Setting up main loop...")
-        
+
         # determine mode to interpret __call__() input
         if self.config["modes"]["re"]:
             generator = self._re_generator(
@@ -1184,18 +1176,18 @@ class SingleObjBatch(ObjBatchBase):
                 in_folder, out_folder, in_pattern,
                 self.config["output"]["figure_format"]
             )
-        
+
         # determine the full path of summary file
         smry_path = pathlib.Path(summary_name).with_suffix(".csv")
         if not smry_path.is_absolute():
             smry_path = pathlib.Path(out_folder) / smry_path
-        
+
         # call internal _run() method for the real work
         self._run(generator, smry_path, stdout=stdout)
-        
+
         if self.config["modes"]["verbosity"]:
             stdout("ALL DONE!")
-        
+
         return
 
 class MultiObjBatch(ObjBatchBase):
@@ -1390,7 +1382,7 @@ class MultiObjBatch(ObjBatchBase):
     -m vtrack.batch) or when the class is used as a backend to the graphical 
     user interface (GUI) created from vtrack.gui
     '''
-    
+
     # class level default options
     defaults = {
         "modes": {
@@ -1439,7 +1431,7 @@ class MultiObjBatch(ObjBatchBase):
             "distance": "object #{}: total distance traveled = {:.0f}"
         }
     }
-    
+
     def __init__(
         self, config_file=None, 
         post_ops=None, post_params=None, post_kwparams=None
@@ -1462,22 +1454,22 @@ class MultiObjBatch(ObjBatchBase):
             self.copy_defaults()
         else:
             self.load_config(config_file)
-            
+
         if post_ops is None:
             self.ops = []
         else:
             self.ops = [ __ for __ in post_ops ]
-        
+
         if post_params is None:
             self.params = [ [] for __ in self.ops ]
         else:
             self.params = [ __ for __ in post_params ]
-            
+
         if post_kwparams is None:
             self.kwparams = [ dict() for __ in self.ops ]
         else:
             self.kwparams = [ __ for __ in post_kwparams ]
-    
+
     @staticmethod
     def _glob_generator(in_folder, out_folder, glob, fig_suffix):
         "iterate through input file and output name in non-re mode"
@@ -1488,45 +1480,45 @@ class MultiObjBatch(ObjBatchBase):
             fig_path = out_path.with_suffix(fig_suffix)
             vid_path = out_path.with_suffix(".mp4")
             yield (in_path, csv_path, fig_path, vid_path)
-    
+
     @staticmethod
     def _re_generator(
         in_folder, out_folder, in_pattern, out_pattern, fig_suffix
     ):
         "iterate through input file and output name in re mode"
         in_pattern = r".*" if (in_pattern is None) else in_pattern
-        
+
         if out_pattern is None:
             out_pattern = [ r"\g<0>" ] * 3
         elif type(out_pattern)==str:
             out_pattern = [ out_pattern ] * 3
-        
+
         in_rgx = re.compile(in_pattern)
-        
+
         for in_path in pathlib.Path(in_folder).iterdir():
             if in_rgx.match(in_path.name):
-                
+
                 csv_path = pathlib.Path(out_folder) / in_rgx.sub(
                     out_pattern[0], in_path.name
                 )
                 csv_path = csv_path.with_suffix(".csv")
-                
+
                 fig_path = pathlib.Path(out_folder) / in_rgx.sub(
                     out_pattern[1], in_path.name
                 )
                 fig_path = fig_path.with_suffix(fig_suffix)
-                
+
                 vid_path = pathlib.Path(out_folder) / in_rgx.sub(
                     out_pattern[2], in_path.name
                 )
                 vid_path = vid_path.with_suffix(".mp4")
-                
+
                 yield (in_path, csv_path, fig_path, vid_path)
-    
+
     @staticmethod
     def _gen_paths(*file_paths, junction="~"):
         "generate filename that avoids conflict with existing files"
-        
+
         file_paths_0 = [ pathlib.Path(__) for __ in file_paths ]
         file_paths = file_paths_0
         i = 0
@@ -1536,9 +1528,9 @@ class MultiObjBatch(ObjBatchBase):
                 __.with_name(__.stem + junction + str(i) + __.suffix)
                 for __ in file_paths_0
             ]
-        
+
         return tuple(file_paths)
-    
+
     def infer_post_ops(self, *, clear=True):
         '''
         infer post-processing operations to perform based on the "postprocess"
@@ -1551,17 +1543,17 @@ class MultiObjBatch(ObjBatchBase):
         
         SIDE EFFECTS: the post-processing pipeline is modified in-place
         '''
-        
+
         # clear the existing postprocessing pipeline if instructed
         if clear:
             self.clear_post_ops()
-        
+
         # nothing to do!
         if "postprocess" not in self.config:
             return
-        
+
         postprocess = self.config["postprocess"]
-        
+
         # remove_small_objects
         if postprocess.get("remove_spots", False):
             if "spot_size" in postprocess:
@@ -1571,7 +1563,7 @@ class MultiObjBatch(ObjBatchBase):
                 )
             else:
                 self.insert_post_ops(morph.remove_small_objects)
-        
+
         # binary_opening
         if postprocess.get("remove_thins", False):
             if "thickness" in postprocess:
@@ -1581,7 +1573,7 @@ class MultiObjBatch(ObjBatchBase):
                 )
             else:
                 self.insert_post_ops(morph.binary_opening)
-    
+
     def _run(self, filename_iterator, summary_path, *, stdout=print):
         '''
         execute batch processing
@@ -1604,15 +1596,15 @@ class MultiObjBatch(ObjBatchBase):
         SIDE EFFECTS:
           files output to out_folder
         '''
-        
+
         verbose = self.config["modes"]["verbosity"]
-        
+
         # copy config into local alias; fill in missing sections if needed
         eager = self.config["modes"]["eager"]
         smooth = self.config["modes"]["smoothen"]
         interact = self.config["modes"]["interactive"]
         overwrite = self.config["modes"]["overwrite"]
-        
+
         make_fig = self.config["output"]["figure"]
         make_csv = self.config["output"]["details"]
         make_vid = self.config["output"]["video"]
@@ -1621,7 +1613,7 @@ class MultiObjBatch(ObjBatchBase):
         rec_conv = self.config["output"]["record_conversion"]
         rec_boxes = self.config["output"]["record_boxes"]
         multi_figs = self.config["output"]["multi_figures"]
-        
+
         n_obj = self.config["params"]["n_obj"]
         start = self.config["params"]["start"]
         stop = self.config["params"]["stop"]
@@ -1631,7 +1623,7 @@ class MultiObjBatch(ObjBatchBase):
         window = self.config["params"]["window"]
         man_thres = self.config["params"]["manual_threshold"]
         intvl = self.config["params"]["sample_interval"]
-        
+
         if make_fig:
             title_template = self.config["template_texts"]["main_title"]
             time_template = self.config["template_texts"]["proportion"]
@@ -1642,14 +1634,14 @@ class MultiObjBatch(ObjBatchBase):
                 fig_fmt = self.config["output"]["figure_format"]
             else:
                 plt_kwargs = self.config.get("plot_n_paths", dict())
-        
+
         bg_kwargs = self.config.get("calc_background", dict())
         th_kwargs = self.config.get("calc_threshold", dict())
         cen_kwargs = self.config.get("compute_n_centroids", dict())
         mot_kwargs = self.config.get("assemble_motion_data", dict())
 
         vid_kwargs = self.config.get("export_overlaid_n_video", dict())
-        
+
         if not eager:
             bg_kwargs = _fold_start_stop(start, stop, step, bg_kwargs)
             if "step" in bg_kwargs[1]:
@@ -1657,11 +1649,11 @@ class MultiObjBatch(ObjBatchBase):
             th_kwargs = _fold_start_stop(start, stop, step, th_kwargs)
             if "step" in th_kwargs[1]:
                 th_kwargs[0]["step"] = th_kwargs[1].pop("step")
-        
+
         # saving all summary information
         if make_smry:
             all_summary = []
-        
+
         # setup variables whose meaning depends on interaction mode
         if interact:
             known_length = self.config["params"]["pixel_length"]
@@ -1708,25 +1700,25 @@ class MultiObjBatch(ObjBatchBase):
             inbox_path = None if (inbox is None) else (
                 vertices_to_path(inbox, px2real)
             )
-        
+
         for (in_path, csv_path, fig_path, vid_path) in filename_iterator:
-            
+
             if verbose: stdout("Processing file '{}'...".format(in_path.name))
             reader = imageio.get_reader(in_path)
             meta = reader.get_meta_data()
             fps = meta["fps"] / step  # effective fps
             sub_step = max(1, int(intvl * fps))
-            
+
             if eager:
-            
+
                 if verbose > 1: stdout("  building grayscaled frames...")
                 frames = build_grayscaled(reader, step, start, stop, cropbox0)
-                
+
                 if verbose > 1: stdout("  calculating background frame...")
                 bg_frame = calc_background(
                     frames, sub_step, cropbox=None, **bg_kwargs
                 )
-                
+
                 if interact:
                     if n_crop is not None:
                         crop_pts = mark_image(
@@ -1744,10 +1736,10 @@ class MultiObjBatch(ObjBatchBase):
                         bg_cropped = bg_frame
                 else:
                     bg_cropped = bg_frame
-                
+
                 if verbose > 1: stdout("  building subtracted frames...")
                 frames = build_subtracted(frames, bg_frame, cropbox=cropbox)
-                
+
                 if man_thres is None:
                     if verbose > 1: stdout("  calculating threshold...")
                     thres = calc_threshold(
@@ -1755,7 +1747,7 @@ class MultiObjBatch(ObjBatchBase):
                     )
                 else:
                     thres = man_thres
-                
+
                 # NOTE: maskbox is expressed in pixel coordinates
                 if interact:
                     if n_mask is not None:
@@ -1772,33 +1764,25 @@ class MultiObjBatch(ObjBatchBase):
                     mask = vertices_to_mask(
                         maskbox, image=bg_frame, cropbox=cropbox0
                     )
-                
+
                 if verbose > 1: stdout("  building binary frames...")
                 frames = build_thresholded(
                     frames, thres, cropbox=None, mask=mask
                 )
-                
+
                 if self.ops: # post-processing exists
                     if verbose > 1: stdout("  post-processing frames...")
                     frames = build_postprocessed(
                         frames, self.ops, self.params, self.kwparams
                     )
-                
-                if interact:
-                    segment = mark_image(
-                        bg_cropped, 2, False, 
-                        title = len_template.format(in_path.name), 
-                        **mark_kwargs
-                    )
-                    px2real = calc_pixel_to_phys(segment, known_length)
-                
+
                 if verbose > 1: stdout("  computing centroids...")
                 coords = compute_n_centroids(
-                    frames, n_obj, px2real, reinitialize=reinit, **cen_kwargs
+                    frames, n_obj, reinitialize=reinit, **cen_kwargs
                 )
-            
+
             else: # "lazy" mode
-                
+
                 if verbose > 1: stdout(
                     "  generating grayscaled frames to calculate background..."
                 )
@@ -1808,7 +1792,7 @@ class MultiObjBatch(ObjBatchBase):
                         **bg_kwargs[0]
                     ), cropbox=None, **bg_kwargs[1]
                 )
-                
+
                 if interact:
                     if n_crop is not None:
                         crop_pts = mark_image(
@@ -1827,7 +1811,7 @@ class MultiObjBatch(ObjBatchBase):
                 else:
                     cropbox = cropbox0
                     bg_cropped = bg_frame
-                
+
                 if man_thres is None:
                     if verbose > 1: stdout(
                         "  generating subtracted frames " + 
@@ -1841,7 +1825,7 @@ class MultiObjBatch(ObjBatchBase):
                     )
                 else:
                     thres = man_thres
-                
+
                 # NOTE: maskbox is expressed in pixel coordinates
                 if interact:
                     if n_mask is not None:
@@ -1856,17 +1840,9 @@ class MultiObjBatch(ObjBatchBase):
                     mask = vertices_to_mask(
                         maskbox, image=bg_frame, cropbox=cropbox0
                     )
-                
-                if interact:
-                    segment = mark_image(
-                        bg_cropped, 2, False, 
-                        title = len_template.format(in_path.name), 
-                        **mark_kwargs
-                    )
-                    px2real = calc_pixel_to_phys(segment, known_length)
-                
+
                 if self.ops: # post-processing exists
-                    
+
                     if verbose > 1: stdout(
                         "  generating post-processed frames" + 
                         " to compute centroids..."
@@ -1877,11 +1853,11 @@ class MultiObjBatch(ObjBatchBase):
                             self.ops, self.params, self.kwparams,
                             step, start, stop,
                             cropbox=cropbox, mask=mask
-                        ), n_obj, px2real, reinitialize=reinit, **cen_kwargs
+                        ), n_obj, reinitialize=reinit, **cen_kwargs
                     )
-                
+
                 else: # no post-processing needed
-                    
+
                     if verbose > 1: stdout(
                         "  generating binary frames to compute centroids..."
                     )
@@ -1889,11 +1865,19 @@ class MultiObjBatch(ObjBatchBase):
                         iter_thresholded(
                             reader, bg_cropped, thres, step, start, stop,
                             cropbox=cropbox, mask=mask
-                        ), n_obj, px2real, reinitialize=reinit, **cen_kwargs
+                        ), n_obj, reinitialize=reinit, **cen_kwargs
                     )
-                
+
             # eager and lazy modes merge back here
-            
+
+            if interact:
+                segment = mark_image(
+                    bg_cropped, 2, False, 
+                    title = len_template.format(in_path.name), 
+                    **mark_kwargs
+                )
+                px2real = calc_pixel_to_phys(segment, known_length)
+
             if interact and (n_in is not None):
                 inbox = mark_image(
                     bg_cropped, n_in, convex, 
@@ -1903,16 +1887,16 @@ class MultiObjBatch(ObjBatchBase):
                 # inbox in physical coordinates
                 inbox = convert_to_physical(inbox, px2real)
                 inbox_path = vertices_to_path(inbox)
-            
+
             if verbose > 1: stdout("  computing motion data...")
             dt = 1/fps
             data, header, summaries = assemble_motion_data(
-                coords, dt, marked_region=inbox_path, smooth=smooth,
+                coords, px2real, dt, marked_region=inbox_path, smooth=smooth,
                 window=window, summary=True, **mot_kwargs
             )
-            
+
             if verbose > 1: stdout("  generating output...")
-            
+
             if multi_figs:
                 fig_paths = []
                 for i in range(1, n_obj + 1):
@@ -1920,7 +1904,7 @@ class MultiObjBatch(ObjBatchBase):
                     fig_paths.append(
                         fig_path.with_name(new_name).with_suffix(fig_fmt)
                     )
-            
+
             if not overwrite:
                 paths = []
                 if make_csv: paths.append(csv_path)
@@ -1939,14 +1923,14 @@ class MultiObjBatch(ObjBatchBase):
                     else:
                         fig_path = paths.pop()
                 if make_csv: csv_path = paths.pop()
-            
+
             if make_csv:
                 write_csv(
                     csv_path, 
                     data.reshape(data.shape[0], -1), 
                     _flattened_list(header)
                 )
-            
+
             if make_fig:
                 if multi_figs:
                     for i in range(n_obj):
@@ -1984,7 +1968,7 @@ class MultiObjBatch(ObjBatchBase):
                         info_list=info_list, save_as=fig_path, close=True, 
                         **plt_kwargs
                     )
-            
+
             if make_vid:
                 box = cropbox if interact else cropbox0
                 box = (0, 0) if (box is None) else box
@@ -1993,7 +1977,7 @@ class MultiObjBatch(ObjBatchBase):
                     data[:, :, 1:3], px2real, box, 
                     fps=fps/step, **vid_kwargs
                 )
-            
+
             if make_smry:
                 out_row = [ in_path.name ]
                 for summary in summaries:
@@ -2001,14 +1985,14 @@ class MultiObjBatch(ObjBatchBase):
                 if rec_thres: out_row.append(thres)
                 if rec_conv: out_row.append(px2real)
                 if rec_boxes: 
-                    
+
                     # cropbox
                     if interact:
                         tmp = _flattened_list(cropbox)
                     else:
                         tmp = _flattened_list(cropbox0)
                     out_row.extend(tmp)
-                    
+
                     # maskbox
                     tmp = _flattened_list(maskbox)
                     out_row.extend(tmp)
@@ -2020,7 +2004,7 @@ class MultiObjBatch(ObjBatchBase):
                         out_row.extend(
                             ["" for __ in range(2 * n_mask - len(tmp))]
                         )
-                    
+
                     # innerbox
                     tmp = _flattened_list(inbox)
                     out_row.extend(tmp)
@@ -2028,16 +2012,16 @@ class MultiObjBatch(ObjBatchBase):
                         out_row.extend(
                             ["" for __ in range(2 * n_in - len(tmp))]
                         )
-                    
+
                 all_summary.append(out_row)
-        
+
         ## END OF FILE ITERATION
-        
+
         if make_smry:
             if verbose > 1: stdout("writing summary file...")
             if not overwrite:
                  summary_path, *_ = self._gen_paths(summary_path)
-                 
+
             # create proper header
             header = ["file name"]
             for i in range(1, n_obj + 1):
@@ -2050,30 +2034,30 @@ class MultiObjBatch(ObjBatchBase):
             if rec_conv:
                 header.append("unit conversion")
             if rec_boxes:
-            
+
                 # cropbox
                 tmp = cropbox if interact else cropbox0
                 if tmp is None:
                     header.append("cropbox")
                 else:
                     header.extend(["cropbox", "", "", ""])
-                
+
                 # maskbox
                 header.append("maskbox")
                 if mask_crop and (n_crop is not None):
                     header.extend(["" for __ in range(2 * n_crop - 1)])
                 elif n_mask is not None:
                     header.extend(["" for __ in range(2 * n_mask - 1)])
-                
+
                 # innerbox
                 header.append("innerbox")
                 if n_in is not None:
                     header.extend(["" for __ in range(2 * n_in - 1)])
-            
+
             write_csv(summary_path, all_summary, header)
-        
+
         return
-    
+
     def __call__(
         self, in_folder, out_folder, in_pattern=None, out_pattern=None,
         summary_name="summary.csv", *, stdout=print
@@ -2108,16 +2092,16 @@ class MultiObjBatch(ObjBatchBase):
         SIDE EFFECTS:
           files output to out_folder
         '''
-        
+
         # check if the in_folder and out_folder are actual directories
         if not pathlib.Path(in_folder).is_dir():
             raise FileNotFoundError("'{}' is not a folder".format(in_folder))
         if not pathlib.Path(out_folder).is_dir():
             raise FileNotFoundError("'{}' is not a folder".format(out_folder))
-        
+
         if self.config["modes"]["verbosity"] > 1:
             stdout("Setting up main loop...")
-        
+
         # determine mode to interpret __call__() input
         if self.config["modes"]["re"]:
             generator = self._re_generator(
@@ -2129,18 +2113,18 @@ class MultiObjBatch(ObjBatchBase):
                 in_folder, out_folder, in_pattern,
                 self.config["output"]["figure_format"]
             )
-        
+
         # determine the full path of summary file
         smry_path = pathlib.Path(summary_name).with_suffix(".csv")
         if not smry_path.is_absolute():
             smry_path = pathlib.Path(out_folder) / smry_path
-        
+
         # call internal _run() method for the real work
         self._run(generator, smry_path, stdout=stdout)
-        
+
         if self.config["modes"]["verbosity"]:
             stdout("ALL DONE!")
-        
+
         return
 
 # control the import * behavior
@@ -2148,9 +2132,9 @@ __all__ = ["SingleObjBatch", "MultiObjBatch"]
 
 # allow the batch module to be run from command line
 if __name__=="__main__":
-    
+
     import argparse
-    
+
     parser = argparse.ArgumentParser(
         description='Batch Video Motion Processing'
     )
@@ -2168,9 +2152,9 @@ if __name__=="__main__":
         help='pattern to rename output files')
     parser.add_argument('-s', '--summary', default="summary.csv", 
         help='name of summary file')
-    
+
     args = parser.parse_args()
-    
+
     mode = args.mode.lower()
     if mode=="single":
         processor = SingleObjBatch(args.config)
@@ -2178,14 +2162,12 @@ if __name__=="__main__":
         processor = MultiObjBatch(args.config)
     else:
         raise ValueError("unknown object detection mode {}".format(args.mode))
-    
+
     # convert postprocessing specification from config into actual pipeline
     processor.infer_post_ops(clear=True)
-    
+
     # start postprocessing
     processor(
         args.in_folder, args.out_folder, args.in_pattern, args.out_pattern,
         args.summary
     )
-
-

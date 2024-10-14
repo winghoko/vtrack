@@ -87,15 +87,15 @@ def terminate():
       the module-global variable root is assigned to None
     '''
     global root
-    
+
     if root is not None:
         try:
             root.destroy()
         except tkinter.TclError:
             pass
-        
+
         root = None
-        
+
     return
 
 def reinitialize():
@@ -111,17 +111,17 @@ def reinitialize():
       variable root
     '''
     global root
-    
+
     if root is not None:
         try:
             root.destroy()
         except tkinter.TclError:
             pass
-    
+
     root = tkinter.Tk()
     root.withdraw()
     root.update()
-    
+
     return
 
 #### Standalone GUI functions
@@ -144,11 +144,11 @@ def file_chooser(mode, *, raise_error=True, **kwargs):
       this function is essentially a convenient wrapper packing several
       tkinter.filedialog functions into one
     '''
-    
+
     # reinitialize Tk root if necessary
     if root is None:
         reinitialize()
-    
+
     # route to different tkinter.filedialog functions depending on mode
     if mode.lower()=="r":
         out = tkinter.filedialog.askopenfilename(**kwargs)
@@ -156,17 +156,17 @@ def file_chooser(mode, *, raise_error=True, **kwargs):
         out = tkinter.filedialog.asksaveasfilename(**kwargs)
     elif mode.lower()=="d":
         out = tkinter.filedialog.askdirectory(**kwargs)
-    
+
     # empty string or empty tuple
     if raise_error and (not out):
         raise ValueError("selection is empty")
-    
+
     # convert to pathlib.Path objects
     if type(out)==str:
         out = pathlib.Path(out)
     else:
         out = tuple([ pathlib.Path(__) for __ in out ])
-        
+
     return out
 
 #### Convenient functions to be passed as arguments to other functions
@@ -228,10 +228,10 @@ def make_filedialog(mode, callback=NoOps, *, raise_error=False, **kwargs):
       raise_error: whether to raise error if no files/directories are chosen
       (**kwargs): remaining keyword arguments are passed to the underlying
         tkinter.filedialog function
-      
+    
     RETURNS:
       a function that opens a file dialog
-      
+    
     NOTE:
       assumes Tk root instance exists
     '''
@@ -248,23 +248,23 @@ def make_filedialog(mode, callback=NoOps, *, raise_error=False, **kwargs):
           raise_error: whether to raise error if no files/directories are chosen
           (**kwargs): remaining keyword arguments are passed to the underlying
             tkinter.filedialog function
-        '''    
+        '''
         # route to different tkinter.filedialog functions depending on mode
-        mode = mode.lower()
-        if mode=="r":
+        mode_l = mode.lower()
+        if mode_l=="r":
             out = tkinter.filedialog.askopenfilename(**kwargs)
-        elif mode=="w":
+        elif mode_l=="w":
             out = tkinter.filedialog.asksaveasfilename(**kwargs)
-        elif mode=="d":
+        elif mode_l=="d":
             out = tkinter.filedialog.askdirectory(**kwargs)
-        
+
         # empty string or empty tuple
         if raise_error and (not out):
             raise ValueError("selection is empty")
-        
+
         # assign result
         callback(out)
-        
+
     return filedialog
 
 def make_elem_insert(elem, position, *, clear=True):
@@ -276,7 +276,7 @@ def make_elem_insert(elem, position, *, clear=True):
       elem: tkinter element to be inserted
       position: position to insert string
       clear: whether to clear existing texts in the element before insertion
-      
+    
     RETURNS:
       a function taking a string as input and insert it into element 
       at position
@@ -295,9 +295,9 @@ def make_elem_insert(elem, position, *, clear=True):
         '''
         if clear:
             elem.delete(0, tkinter.END)
-        
+
         elem.insert(position, string)
-    
+
     return elem_insert
 
 def make_message_pop(
@@ -317,24 +317,24 @@ def make_message_pop(
       preprocess: pre-processing to be applied to data (None if data is 
         used as-is)
       (**kwargs): arguments pass to the ScrollText constructor
-      
+    
     RETURNS:
       a function taking no input and create a pop-up message box
-      
+    
     NOTE:
       assumes Tk root instance exists
     '''
-    
+
     if preprocess is not None:
         data = preprocess(data)
-    
+
     def message_pop():
         '''
         insert string into the tkinter element at specified position
         
         ARGUMENTS:
           string: string to be inserted
-          
+        
         FROM ENCLOSING SCOPE:
           master: the parent of the message box windows
           width: width (in character unit) of the message box
@@ -358,7 +358,7 @@ def make_message_pop(
         textbox.configure(state='disabled')
         textbox.pack(fill=tkinter.BOTH, expand=True)
         window.update()
-    
+
     return message_pop
 
 #### Classes of full-fledged GUIs
@@ -368,7 +368,7 @@ class BaseBatchGUI(abc.ABC):
     Abstract base class for batch processing GUIs
     NOTE: has CONCRETE methods nonetheless!
     '''
-    
+
     # help for get_option()
     get_opt_help = '''
     To see all currently defined options, leave "section" empty and hit "Get!"
@@ -403,16 +403,16 @@ class BaseBatchGUI(abc.ABC):
     
     To close the Set Option(s) GUI window, hit "Back"
     '''
-    
+
     def load_config_callback(self, config_file):
         '''
         to be called by filedialog (constructed by make_filedialog) to 
         update the actual in-memory configuration at the backend
         '''
-        
+
         try:
             self.backend.load_config(config_file)
-        
+
         # show info to user using appropriate message boxes
         except FileNotFoundError:
             tkinter.messagebox.showerror(
@@ -429,16 +429,16 @@ class BaseBatchGUI(abc.ABC):
                 title="load_config", 
                 message="Configuration file loaded"
             )
-    
+
     def save_config_callback(self, config_file):
         '''
         to be called by filedialog (constructed by make_filedialog) to 
         actually output the in-memory configuration at the backend to file
         '''
-        
+
         try:
             self.backend.save_config(config_file, indent=2)
-            
+
         # show info to user using appropriate message boxes
         except FileNotFoundError:
             tkinter.messagebox.showerror(
@@ -450,21 +450,21 @@ class BaseBatchGUI(abc.ABC):
                 title="save_config", 
                 message="Configuration file saved"
             )
-        
+
     def reset_config(self):
         '''
         reset the in-memory configuration at the backend to the class-level
         default
         '''
-        
+
         self.backend.copy_defaults()
-        
+
         # show info to user using appropriate message boxes
         tkinter.messagebox.showinfo(
             title="reset_config", 
             message="Default configuration restored"
         )
-    
+
     def start_get_GUI(self):
         '''
         launch the GUI for getting config option values to a new window
@@ -472,15 +472,15 @@ class BaseBatchGUI(abc.ABC):
         # start new top-level window
         get_GUI = tkinter.Toplevel(master=self.frontend)
         get_GUI.title("Get Option(s) GUI")
-        
+
         # two organizing frames
         frm_get_opt = tkinter.Frame(master=get_GUI)
         frm_get_prompt = tkinter.Frame(master=get_GUI)
-        
+
         # grid structure of top frame
         frm_get_opt.columnconfigure(0, weight=0, minsize=50)
         frm_get_opt.columnconfigure(1, weight=1, minsize=250)
-        
+
         # left of top frame: labels
         lbl_get_sect = tkinter.Label(
             master=frm_get_opt, text="Section:", width=10
@@ -490,18 +490,18 @@ class BaseBatchGUI(abc.ABC):
             master=frm_get_opt, text="Option:", width=10
         )
         lbl_get_opt.grid(row=1, column=0, padx=5, pady=5, sticky="w")
-        
+
         # right of top frame: entry boxes
         entr_get_sect = tkinter.Entry(master=frm_get_opt)
         entr_get_sect.grid(row=0, column=1, padx=5, pady=5, sticky="we")
         entr_get_opt = tkinter.Entry(master=frm_get_opt)
         entr_get_opt.grid(row=1, column=1, padx=5, pady=5, sticky="we")
-        
+
         # configure the geometry of the second frame
         frm_get_prompt.columnconfigure(0, weight=0)
         frm_get_prompt.columnconfigure(1, weight=0)
         frm_get_prompt.columnconfigure(2, weight=1)
-        
+
         # second frame: three buttons
         btn_get = tkinter.Button(
             master=frm_get_prompt, text="Get!", width=5,
@@ -522,26 +522,26 @@ class BaseBatchGUI(abc.ABC):
             )
         )
         btn_get_help.grid(row=0, column=2, padx=5, pady=5, sticky="e")
-        
+
         # implicit third organizing frame: output textbox
         get_outbox = tkinter.scrolledtext.ScrolledText(
             master=get_GUI, relief="ridge", width=80, height=5, 
             padx=5, pady=5, bg="white"
         )
         get_outbox.configure(state='disabled')
-        
+
         # pack the organizing frames to the window
         frm_get_opt.pack(fill=tkinter.BOTH, expand=False)
         frm_get_prompt.pack(fill=tkinter.BOTH, expand=False)
         get_outbox.pack(fill=tkinter.BOTH, expand=True)
-        
+
         # define protocol when user closed the GUI window
         get_GUI.protocol("WM_DELETE_WINDOW", self.kill_get_GUI)
-        
+
         # "launch" the GUI
         get_GUI.geometry("480x240")
         get_GUI.update()
-        
+
         # hook local variable to instance attribute
         self.get_GUI = get_GUI
         self.get_entries = {
@@ -549,7 +549,7 @@ class BaseBatchGUI(abc.ABC):
             "option": entr_get_opt
         }
         self.get_outbox = get_outbox
-        
+
     def get_option(self):
         '''
         obtain the request for getting config option from the GUI, 
@@ -557,33 +557,33 @@ class BaseBatchGUI(abc.ABC):
         '''
         # obtain (string) arguments from the respective entry boxes
         args = [ __.get().strip() for __ in self.get_entries.values() ]
-        
+
         if not args[0]: #empty or None
             args[0] = None
         if not args[1]: #empty or None
             args[1] = None
-        
+
         try:
             out = self.backend.get_option(*args)
         except KeyError:
             out = "[WARNING] value for ({}, {}) not found!".format(
                 *args
             )
-        
+
         if type(out)==dict: # format output if a whole section is requested
             out = "\n".join(
                 key + ": " + str(value) for (key, value) in out.items()
             )
         elif type(out) != str:
             out = str(out)
-        
+
         # output to textbox
         self.get_outbox.configure(state='normal')
         self.get_outbox.delete("0.0", tkinter.END)
         self.get_outbox.insert(tkinter.END, out)
         self.get_outbox.configure(state='disabled')
         self.get_GUI.update()
-    
+
     def kill_get_GUI(self):
         '''
         terminate the window containing the GUI for getting the values of
@@ -597,7 +597,7 @@ class BaseBatchGUI(abc.ABC):
         if self.get_GUI is not None:
             self.get_GUI.destroy()
             self.get_GUI = None
-    
+
     def start_set_GUI(self):
         '''
         launch the GUI for setting config option values to a new window
@@ -605,15 +605,15 @@ class BaseBatchGUI(abc.ABC):
         # start new top-level window
         set_GUI = tkinter.Toplevel(master=self.frontend)
         set_GUI.title("Set Option(s) GUI")
-        
+
         # two organizing frames
         frm_set_opt = tkinter.Frame(master=set_GUI)
         frm_set_prompt = tkinter.Frame(master=set_GUI)
-        
+
         # grid structure of top frame
         frm_set_opt.columnconfigure(0, weight=0, minsize=50)
         frm_set_opt.columnconfigure(1, weight=1, minsize=250)
-        
+
         # left of top frame: labels
         lbl_set_sect = tkinter.Label(
             master=frm_set_opt, text="Section:", width=10
@@ -627,7 +627,7 @@ class BaseBatchGUI(abc.ABC):
             master=frm_set_opt, text="Value:", width=10
         )
         lbl_set_val.grid(row=2, column=0, padx=5, pady=5, sticky="w")
-        
+
         # right of top frame: entry boxes
         entr_set_sect = tkinter.Entry(master=frm_set_opt)
         entr_set_sect.grid(row=0, column=1, padx=5, pady=5, sticky="we")
@@ -635,12 +635,12 @@ class BaseBatchGUI(abc.ABC):
         entr_set_opt.grid(row=1, column=1, padx=5, pady=5, sticky="we")
         entr_set_val = tkinter.Entry(master=frm_set_opt)
         entr_set_val.grid(row=2, column=1, padx=5, pady=5, sticky="we")
-        
+
         # configure the geometry of the second frame
         frm_set_prompt.columnconfigure(0, weight=0)
         frm_set_prompt.columnconfigure(1, weight=0)
         frm_set_prompt.columnconfigure(2, weight=1)
-        
+
         # second frame: three buttons
         btn_set = tkinter.Button(
             master=frm_set_prompt, text="Set!", width=5,
@@ -661,18 +661,18 @@ class BaseBatchGUI(abc.ABC):
             )
         )
         btn_set_help.grid(row=0, column=2, padx=5, pady=5, sticky="e")
-        
+
         # pack the organizing frames to the window
         frm_set_opt.pack(fill=tkinter.BOTH, expand=False)
         frm_set_prompt.pack(fill=tkinter.BOTH, expand=False)
-        
+
         # define protocol when user closed the GUI window
         set_GUI.protocol("WM_DELETE_WINDOW", self.kill_set_GUI)
-        
+
         # "launch" the GUI
         set_GUI.geometry("480x140")
         set_GUI.update()
-        
+
         # hook local variable to instance attributes
         self.set_GUI = set_GUI
         self.set_entries = {
@@ -680,40 +680,40 @@ class BaseBatchGUI(abc.ABC):
             "option": entr_set_opt,
             "value": entr_set_val
         }
-    
+
     def set_option(self):
         '''
         obtain the request for setting config option from the GUI, 
         and route the request to the backend
         '''
-        
+
         # obtain (string) arguments from the respective entry boxes
         args = [ __.get() for __ in self.set_entries.values() ]
-        
+
         args[0] = args[0].strip()
         args[1] = args[1].strip()
-        
+
         if (not args[0]) or (not args[1]):
             tkinter.messagebox.showerror(
                 title="set_option", 
                 message="Invalid option specification. No action taken"
             )
             return
-            
+
         val = args[2]
         try:
             args[2] = literal_eval(val)
         except Exception as e: # restore default type of string
             args[2] = val
-        
+
         self.backend.set_option(*args)
-        
+
         # show confirmation on option setting via message box
         tkinter.messagebox.showinfo(
             title="set_option", 
             message="Value {2} saved for ({0}, {1})".format(*args)
         )
-    
+
     def kill_set_GUI(self):
         '''
         terminate the window containing the GUI for setting values of 
@@ -727,14 +727,14 @@ class BaseBatchGUI(abc.ABC):
         if self.set_GUI is not None:
             self.set_GUI.destroy()
             self.set_GUI = None
-    
+
     @abc.abstractmethod
     def start_frontend(self):
         '''
         start the main frontend GUI and the Tk mainloop
         '''
         pass
-    
+
     @abc.abstractmethod
     def kill_frontend(self):
         '''
@@ -742,7 +742,7 @@ class BaseBatchGUI(abc.ABC):
         Tk window
         '''
         pass
-    
+
     @abc.abstractmethod
     def stdout(self, data):
         '''
@@ -750,7 +750,7 @@ class BaseBatchGUI(abc.ABC):
         be used by the backend to route output
         '''
         pass
-    
+
     @abc.abstractmethod
     def process(self):
         '''
@@ -763,7 +763,7 @@ class SingleObjOneGUI(BaseBatchGUI):
     class to implement graphical user interface (GUI) for single object,
     single file video motion tracking
     '''
-    
+
     # help message to be displayed
     main_help = '''
     Graphical user interface (GUI) for single object, single file video 
@@ -930,18 +930,18 @@ class SingleObjOneGUI(BaseBatchGUI):
     NOTE that the order of operations is determined by the order at which
     the options are specified.
     '''
-    
+
     def __init__(self, config_file=None):
         '''
         initialize the main GUI after asking for the configuration file
         '''
-        
+
         from .batch import SingleObjBatch
-        
+
         # initialize GUI
         if root is None:
             reinitialize()
-        
+
         # choose configuration file
         if config_file is None:
             try:
@@ -952,11 +952,11 @@ class SingleObjOneGUI(BaseBatchGUI):
                 config = None
         else:
             config = config_file
-        
+
         # initialize batch processor
         try:
             self.backend = SingleObjBatch(config)
-            
+
         # show info to user using appropriate message boxes
         except JSONDecodeError as e:
             tkinter.messagebox.showerror(
@@ -974,10 +974,10 @@ class SingleObjOneGUI(BaseBatchGUI):
                     title="load_config", 
                     message="Configuration file loaded"
                 )
-        
+
         # initialize GUI
         self.start_frontend()
-    
+
     def figfile_dialog(self):
         '''
         start a file dialog in which the default extension is obtained live
@@ -994,32 +994,32 @@ class SingleObjOneGUI(BaseBatchGUI):
             out = tkinter.filedialog.asksaveasfilename(
                 defaultextension=ext
             )
-        
+
         # assign result
         self.entries["fig_path"].delete(0, tkinter.END)
         self.entries["fig_path"].insert(tkinter.END, out)
-    
+
     def start_frontend(self):
-        
+
         # reinitialize Tk root if none existed
         if root is None:
             reinitialize()
-        
+
         # create window for main GUI
         frontend = tkinter.Toplevel(master=root)
         frontend.title("Single Object Per-File Processing GUI")
-        
+
         # creating three organizing frames
         frm_config = tkinter.Frame(master=frontend)
         frm_files = tkinter.Frame(master=frontend)
         frm_prompt = tkinter.Frame(master=frontend)
-        
+
         # configure the grid of the first frame
         frm_config.columnconfigure(0, weight=0)
         frm_config.columnconfigure(1, weight=0)
         frm_config.columnconfigure(2, weight=0)
         frm_config.columnconfigure(3, weight=1)
-        
+
         # first frame: two rows of buttons
         btn_load_conf = tkinter.Button(
             master=frm_config, text="Load Config", width=12,
@@ -1059,11 +1059,11 @@ class SingleObjOneGUI(BaseBatchGUI):
             command=self.start_set_GUI
         )
         btn_set_opt.grid(row=1, column=1, padx=3, pady=3)
-        
+
         # configure the grid of the second frame
         frm_files.columnconfigure(0, weight=0, minsize=150)
         frm_files.columnconfigure(1, weight=1, minsize=250)
-        
+
         # right of second frame: entry boxes
         entr_input = tkinter.Entry(master=frm_files)
         entr_input.grid(row=0, column=1, padx=5, pady=5, sticky="we")
@@ -1075,7 +1075,7 @@ class SingleObjOneGUI(BaseBatchGUI):
         entr_vid.grid(row=3, column=1, padx=5, pady=5, sticky="we")
         entr_smry = tkinter.Entry(master=frm_files)
         entr_smry.grid(row=4, column=1, padx=5, pady=5, sticky="we")
-        
+
         # left of second frame: buttons
         btn_input = tkinter.Button(
             master=frm_files, text="Select Input File", width=20,
@@ -1118,7 +1118,7 @@ class SingleObjOneGUI(BaseBatchGUI):
             )
         )
         btn_smry.grid(row=4, column=0, padx=5, pady=5)
-        
+
         # third frame: two buttons
         btn_run = tkinter.Button(
             master=frm_prompt, text="RUN!", width=5,
@@ -1130,33 +1130,33 @@ class SingleObjOneGUI(BaseBatchGUI):
             command=self.kill_frontend
         )
         btn_exit.grid(row=0, column=1, padx=10, pady=5)
-        
+
         # implicit fourth frame: output text box
         outbox = tkinter.scrolledtext.ScrolledText(
             master=frontend, relief="ridge", width=80, height=5, 
             padx=5, pady=5, bg="white"
         )
         outbox.configure(state='disabled')
-        
+
         # pack the organizing frames to the windows
         frm_config.pack(fill=tkinter.BOTH, expand=False)
         frm_files.pack(fill=tkinter.BOTH, expand=False)
         frm_prompt.pack(fill=tkinter.BOTH, expand=False)
         outbox.pack(fill=tkinter.BOTH, expand=True)
-        
+
         # define protocol when user closed the GUI window
         frontend.protocol("WM_DELETE_WINDOW", self.kill_frontend)
-        
+
         # "launch" the main GUI
         frontend.geometry("640x480")
         frontend.update()
-        
+
         # make sure all sub-windows are initialized
         self.get_GUI = None
         self.set_GUI = None
         self.kill_get_GUI()
         self.kill_set_GUI()
-        
+
         # hook local variable to instance attributes
         self.frontend = frontend
         self.outbox = outbox
@@ -1167,16 +1167,16 @@ class SingleObjOneGUI(BaseBatchGUI):
             "vid_path": entr_vid,
             "smry_path": entr_smry
         }
-        
+
         # start main loop (must be last line!)
         root.mainloop()
-    
+
     def kill_frontend(self):
-        
+
         # make sure all children windows are closed
         self.kill_get_GUI()
         self.kill_set_GUI()
-        
+
         # reset instance attributes
         self.outbox = None
         self.entries = {
@@ -1189,79 +1189,79 @@ class SingleObjOneGUI(BaseBatchGUI):
         if self.frontend is not None:
             self.frontend.destroy()
             self.frontend = None
-        
+
         # kill the current Tk mainloop
         terminate()
-    
+
     def stdout(self, data, *, position=tkinter.END, end="\n"):
-        
+
         self.outbox.configure(state='normal')
         self.outbox.insert(position, data + end)
         self.outbox.see(tkinter.END)
         self.outbox.configure(state='disabled')
         self.frontend.update()
-    
+
     def infer_options(self):
         '''
         set config values based on user's GUI input
         '''
-        
+
         # alias for easy modifications
         output = self.backend.config["output"]
-        
+
         raw = [ __.get().strip() for __ in self.entries.values() ]
-        
+
         if not raw[0]: # empty input file
             tkinter.messagebox.showerror(
                 title="RUN!", 
                 message="Empty input file. No action taken"
             )
             raise ValueError("Invalid input")
-        
+
         if raw[1]:
             output["details"] = True
         else: # empty CSV file
             output["details"] = False
-            
+
         if raw[2]:
             output["figure"] = True
             output["figure_format"] = pathlib.Path(raw[2]).suffix
         else: # empty figure file
             output["figure"] = False
-        
+
         if raw[3]:
             output["video"] = True
         else: # empty video file
             output["video"] = False
-        
+
         if raw[4]:
             output["summary"] = True
         else:
             output["summary"] = False
-    
+
     def process(self):
-        
+
         # infer config settings from user input
         try:
             self.infer_options()
         except ValueError:
             return
-        
+
         paths = [ 
             pathlib.Path(__.get().strip()) for __ in self.entries.values() 
         ]
-        
+
         # infer postprocessing from postprocess section of config
         self.backend.infer_post_ops(clear=True)
-        
+
         # clear previous texts printed to outbox
         self.outbox.configure(state='normal')
         self.outbox.delete("0.0", tkinter.END)
         self.outbox.configure(state='disabled')
-        
+
         # route to backend
         self.backend._run([ paths[:-1] ], paths[-1], stdout=self.stdout)
-        
+
         # signal to user when all video processing is done
         self.stdout("DONE!")
 
@@ -1270,7 +1270,7 @@ class SingleObjBatchGUI(BaseBatchGUI):
     class to implement graphical user interface (GUI) for single object,
     multiple files video motion tracking
     '''
-    
+
     # help message to be displayed
     main_help = '''
     Graphical user interface (GUI) for single object, multiple files video 
@@ -1440,18 +1440,18 @@ class SingleObjBatchGUI(BaseBatchGUI):
     NOTE that the order of operations is determined by the order at which
     the options are specified.
     '''
-    
+
     def __init__(self, config_file=None):
         '''
         initialize the main GUI after asking for the configuration file
         '''
-        
+
         from .batch import SingleObjBatch
-        
+
         # initialize GUI
         if root is None:
             reinitialize()
-        
+
         # choose configuration file
         if config_file is None:
             try:
@@ -1462,11 +1462,11 @@ class SingleObjBatchGUI(BaseBatchGUI):
                 config = None
         else:
             config = config_file
-        
+
         # initialize batch processor
         try:
             self.backend = SingleObjBatch(config)
-            
+
         # show info to user using appropriate message boxes
         except JSONDecodeError as e:
             tkinter.messagebox.showerror(
@@ -1484,31 +1484,31 @@ class SingleObjBatchGUI(BaseBatchGUI):
                     title="load_config", 
                     message="Configuration file loaded"
                 )
-        
+
         # initialize GUI
         self.start_frontend()
-    
+
     def start_frontend(self):
-        
+
         # reinitialize Tk root if none existed
         if root is None:
             reinitialize()
-        
+
         # create window for main GUI
         frontend = tkinter.Toplevel(master=root)
         frontend.title("Single Object Batch Processing GUI")
-        
+
         # creating three organizing frames
         frm_config = tkinter.Frame(master=frontend)
         frm_files = tkinter.Frame(master=frontend)
         frm_prompt = tkinter.Frame(master=frontend)
-        
+
         # configure the grid of the first frame
         frm_config.columnconfigure(0, weight=0)
         frm_config.columnconfigure(1, weight=0)
         frm_config.columnconfigure(2, weight=0)
         frm_config.columnconfigure(3, weight=1)
-        
+
         # first frame: two rows of buttons
         btn_load_conf = tkinter.Button(
             master=frm_config, text="Load Config", width=12,
@@ -1548,11 +1548,11 @@ class SingleObjBatchGUI(BaseBatchGUI):
             command=self.start_set_GUI
         )
         btn_set_opt.grid(row=1, column=1, padx=3, pady=3)
-        
+
         # configure the grid of the second frame
         frm_files.columnconfigure(0, weight=0, minsize=150)
         frm_files.columnconfigure(1, weight=1, minsize=250)
-        
+
         # right of second frame (top): entry boxes
         entr_infolder = tkinter.Entry(master=frm_files)
         entr_infolder.grid(row=0, column=1, padx=5, pady=5, sticky="we")
@@ -1560,7 +1560,7 @@ class SingleObjBatchGUI(BaseBatchGUI):
         entr_outfolder.grid(row=1, column=1, padx=5, pady=5, sticky="we")
         entr_summary = tkinter.Entry(master=frm_files)
         entr_summary.grid(row=2, column=1, padx=5, pady=5, sticky="we")
-        
+
         # left of second frame (top): buttons
         btn_infolder = tkinter.Button(
             master=frm_files, text="Select Input Folder", width=20,
@@ -1589,7 +1589,7 @@ class SingleObjBatchGUI(BaseBatchGUI):
             )
         )
         btn_summary.grid(row=2, column=0, padx=5, pady=5)
-        
+
         # left of second frame (bottom): buttons
         lbl_inpattern = tkinter.Label(
             master=frm_files, text="Input Pattern:", width=20
@@ -1599,13 +1599,13 @@ class SingleObjBatchGUI(BaseBatchGUI):
             master=frm_files, text="Output Pattern:", width=20
         )
         lbl_outpattern.grid(row=4, column=0, padx=5, pady=5)
-        
+
         # right of second frame (bottom): entry boxes
         entr_inpattern = tkinter.Entry(master=frm_files)
         entr_inpattern.grid(row=3, column=1, padx=5, pady=5, sticky="we")
         entr_outpattern = tkinter.Entry(master=frm_files)
         entr_outpattern.grid(row=4, column=1, padx=5, pady=5, sticky="we")
-        
+
         # third frame: two buttons
         btn_run = tkinter.Button(
             master=frm_prompt, text="RUN!", width=5,
@@ -1617,33 +1617,33 @@ class SingleObjBatchGUI(BaseBatchGUI):
             command=self.kill_frontend
         )
         btn_exit.grid(row=0, column=1, padx=10, pady=5)
-        
+
         # implicit fourth frame: output text box
         outbox = tkinter.scrolledtext.ScrolledText(
             master=frontend, relief="ridge", width=80, height=5, 
             padx=5, pady=5, bg="white"
         )
         outbox.configure(state='disabled')
-        
+
         # pack the organizing frames to the windows
         frm_config.pack(fill=tkinter.BOTH, expand=False)
         frm_files.pack(fill=tkinter.BOTH, expand=False)
         frm_prompt.pack(fill=tkinter.BOTH, expand=False)
         outbox.pack(fill=tkinter.BOTH, expand=True)
-        
+
         # define protocol when user closed the GUI window
         frontend.protocol("WM_DELETE_WINDOW", self.kill_frontend)
-        
+
         # "launch" the main GUI
         frontend.geometry("640x480")
         frontend.update()
-        
+
         # make sure all sub-windows are initialized
         self.get_GUI = None
         self.set_GUI = None
         self.kill_get_GUI()
         self.kill_set_GUI()
-        
+
         # hook local variable to instance attributes
         self.frontend = frontend
         self.outbox = outbox
@@ -1654,16 +1654,16 @@ class SingleObjBatchGUI(BaseBatchGUI):
             "out_pattern": entr_outpattern,
             "summary_name": entr_summary
         }
-        
+
         # start main loop (must be last line!)
         root.mainloop()
-    
+
     def kill_frontend(self):
-        
+
         # make sure all children windows are closed
         self.kill_get_GUI()
         self.kill_set_GUI()
-        
+
         # reset instance attributes
         self.outbox = None
         self.entries = {
@@ -1676,42 +1676,42 @@ class SingleObjBatchGUI(BaseBatchGUI):
         if self.frontend is not None:
             self.frontend.destroy()
             self.frontend = None
-        
+
         # kill the current Tk mainloop
         terminate()
-    
+
     def stdout(self, data, *, position=tkinter.END, end="\n"):
-        
+
         self.outbox.configure(state='normal')
         self.outbox.insert(position, data + end)
         self.outbox.see(tkinter.END)
         self.outbox.configure(state='disabled')
         self.frontend.update()
-    
+
     def infer_options(self):
         '''
         set config values based on user's GUI input
         '''
-        
+
         # infer the value of summary in the "output" section
         raw = self.entries["summary_name"].get().strip()
         if raw:
             self.backend.config["output"]["summary"] = True
         else:
             self.backend.config["output"]["summary"] = False
-    
+
     def process(self):
-        
+
         # infer config settings from user input
         try:
             self.infer_options()
         except ValueError:
             return
-        
+
         # obtain (string) arguments from the GUI
         args = [ __.get().strip() for __ in self.entries.values() ]
         args = args[:5]
-        
+
         # check if input/output folders are specified
         if (not args[0]) or (not args[1]):
             tkinter.messagebox.showerror(
@@ -1722,20 +1722,20 @@ class SingleObjBatchGUI(BaseBatchGUI):
                 )
             )
             return
-        
+
         # convert empty strings to default values
         if not args[2]: args[2] = None
         if not args[3]: args[3] = None
         if not args[4]: args = args[:4]
-        
+
         # infer postprocessing from postprocess section of config
         self.backend.infer_post_ops(clear=True)
-        
+
         # clear previous texts printed to outbox
         self.outbox.configure(state='normal')
         self.outbox.delete("0.0", tkinter.END)
         self.outbox.configure(state='disabled')
-        
+
         # route operations to the backend
         self.backend(*args, stdout=self.stdout)
 
@@ -1744,7 +1744,7 @@ class MultiObjOneGUI(BaseBatchGUI):
     class to implement graphical user interface (GUI) for multiple objects,
     single file video motion tracking
     '''
-    
+
     # help message to be displayed
     main_help = '''
     Graphical user interface (GUI) for multiple objects, single file video 
@@ -1929,18 +1929,18 @@ class MultiObjOneGUI(BaseBatchGUI):
     NOTE that the order of operations is determined by the order at which
     the options are specified.
     '''
-    
+
     def __init__(self, config_file=None):
         '''
         initialize the main GUI after asking for the configuration file
         '''
-        
+
         from .batch import MultiObjBatch
-        
+
         # initialize GUI
         if root is None:
             reinitialize()
-        
+
         # choose configuration file
         if config_file is None:
             try:
@@ -1951,11 +1951,11 @@ class MultiObjOneGUI(BaseBatchGUI):
                 config = None
         else:
             config = config_file
-        
+
         # initialize batch processor
         try:
             self.backend = MultiObjBatch(config)
-            
+
         # show info to user using appropriate message boxes
         except JSONDecodeError as e:
             tkinter.messagebox.showerror(
@@ -1973,10 +1973,10 @@ class MultiObjOneGUI(BaseBatchGUI):
                     title="load_config", 
                     message="Configuration file loaded"
                 )
-        
+
         # initialize GUI
         self.start_frontend()
-    
+
     def figfile_dialog(self):
         '''
         start a file dialog in which the default extension is obtained live
@@ -1993,32 +1993,32 @@ class MultiObjOneGUI(BaseBatchGUI):
             out = tkinter.filedialog.asksaveasfilename(
                 defaultextension=ext
             )
-        
+
         # assign result
         self.entries["fig_path"].delete(0, tkinter.END)
         self.entries["fig_path"].insert(tkinter.END, out)
-    
+
     def start_frontend(self):
-        
+
         # reinitialize Tk root if none existed
         if root is None:
             reinitialize()
-        
+
         # create window for main GUI
         frontend = tkinter.Toplevel(master=root)
         frontend.title("Multiple Objects Per-File Processing GUI")
-        
+
         # creating three organizing frames
         frm_config = tkinter.Frame(master=frontend)
         frm_files = tkinter.Frame(master=frontend)
         frm_prompt = tkinter.Frame(master=frontend)
-        
+
         # configure the grid of the first frame
         frm_config.columnconfigure(0, weight=0)
         frm_config.columnconfigure(1, weight=0)
         frm_config.columnconfigure(2, weight=0)
         frm_config.columnconfigure(3, weight=1)
-        
+
         # first frame: two rows of buttons
         btn_load_conf = tkinter.Button(
             master=frm_config, text="Load Config", width=12,
@@ -2058,11 +2058,11 @@ class MultiObjOneGUI(BaseBatchGUI):
             command=self.start_set_GUI
         )
         btn_set_opt.grid(row=1, column=1, padx=3, pady=3)
-        
+
         # configure the grid of the second frame
         frm_files.columnconfigure(0, weight=0, minsize=150)
         frm_files.columnconfigure(1, weight=1, minsize=250)
-        
+
         # right of second frame: entry boxes
         entr_input = tkinter.Entry(master=frm_files)
         entr_input.grid(row=0, column=1, padx=5, pady=5, sticky="we")
@@ -2074,7 +2074,7 @@ class MultiObjOneGUI(BaseBatchGUI):
         entr_vid.grid(row=3, column=1, padx=5, pady=5, sticky="we")
         entr_smry = tkinter.Entry(master=frm_files)
         entr_smry.grid(row=4, column=1, padx=5, pady=5, sticky="we")
-        
+
         # left of second frame: buttons
         btn_input = tkinter.Button(
             master=frm_files, text="Select Input File", width=20,
@@ -2117,7 +2117,7 @@ class MultiObjOneGUI(BaseBatchGUI):
             )
         )
         btn_smry.grid(row=4, column=0, padx=5, pady=5)
-        
+
         # third frame: one label + entry box and two buttons
         lbl_nobj = tkinter.Label(
             master=frm_prompt, text="Number of foreground objects:", width=25
@@ -2140,33 +2140,33 @@ class MultiObjOneGUI(BaseBatchGUI):
             command=self.kill_frontend
         )
         btn_exit.grid(row=0, column=3, padx=10, pady=5)
-        
+
         # implicit fourth frame: output text box
         outbox = tkinter.scrolledtext.ScrolledText(
             master=frontend, relief="ridge", width=80, height=5, 
             padx=5, pady=5, bg="white"
         )
         outbox.configure(state='disabled')
-        
+
         # pack the organizing frames to the windows
         frm_config.pack(fill=tkinter.BOTH, expand=False)
         frm_files.pack(fill=tkinter.BOTH, expand=False)
         frm_prompt.pack(fill=tkinter.BOTH, expand=False)
         outbox.pack(fill=tkinter.BOTH, expand=True)
-        
+
         # define protocol when user closed the GUI window
         frontend.protocol("WM_DELETE_WINDOW", self.kill_frontend)
-        
+
         # "launch" the main GUI
         frontend.geometry("640x480")
         frontend.update()
-        
+
         # make sure all sub-windows are initialized
         self.get_GUI = None
         self.set_GUI = None
         self.kill_get_GUI()
         self.kill_set_GUI()
-        
+
         # hook local variable to instance attributes
         self.frontend = frontend
         self.outbox = outbox
@@ -2178,16 +2178,16 @@ class MultiObjOneGUI(BaseBatchGUI):
             "smry_path": entr_smry,
             "n_obj": entr_nobj
         }
-        
+
         # start main loop (must be last line!)
         root.mainloop()
-    
+
     def kill_frontend(self):
-        
+
         # make sure all children windows are closed
         self.kill_get_GUI()
         self.kill_set_GUI()
-        
+
         # reset instance attributes
         self.outbox = None
         self.entries = {
@@ -2201,35 +2201,35 @@ class MultiObjOneGUI(BaseBatchGUI):
         if self.frontend is not None:
             self.frontend.destroy()
             self.frontend = None
-        
+
         # kill the current Tk mainloop
         terminate()
-    
+
     def stdout(self, data, *, position=tkinter.END, end="\n"):
-        
+
         self.outbox.configure(state='normal')
         self.outbox.insert(position, data + end)
         self.outbox.see(tkinter.END)
         self.outbox.configure(state='disabled')
         self.frontend.update()
-    
+
     def infer_options(self):
         '''
         set config values based on user's GUI input
         '''
-        
+
         # alias for easy modifications
         output = self.backend.config["output"]
-        
+
         raw = [ __.get().strip() for __ in self.entries.values() ]
-        
+
         if not raw[0]: # empty input file
             tkinter.messagebox.showerror(
                 title="RUN!", 
                 message="Empty input file. No action taken"
             )
             raise ValueError("Invalid input")
-        
+
         try:
             n_obj = int(raw[5])
         except ValueError as e:
@@ -2238,7 +2238,7 @@ class MultiObjOneGUI(BaseBatchGUI):
                 message="Invalid number of foreground objects. No action taken"
             )
             raise e
-        
+
         if n_obj < 2:
             tkinter.messagebox.showerror(
                 title="RUN!", 
@@ -2250,51 +2250,51 @@ class MultiObjOneGUI(BaseBatchGUI):
             raise ValueError("Invalid input")
         else:
             self.backend.config["params"]["n_obj"] = n_obj
-        
+
         if raw[1]:
             output["details"] = True
         else: # empty CSV file
             output["details"] = False
-            
+
         if raw[2]:
             output["figure"] = True
             output["figure_format"] = pathlib.Path(raw[2]).suffix
         else: # empty figure file
             output["figure"] = False
-        
+
         if raw[3]:
             output["video"] = True
         else: # empty video file
             output["video"] = False
-        
+
         if raw[4]:
             output["summary"] = True
         else:
             output["summary"] = False
-    
+
     def process(self):
-        
+
         # infer config settings from user input
         try:
             self.infer_options()
         except ValueError:
             return
-        
+
         paths = [ 
             pathlib.Path(__.get().strip()) for __ in self.entries.values() 
         ]
-        
+
         # infer postprocessing from postprocess section of config
         self.backend.infer_post_ops(clear=True)
-        
+
         # clear previous texts printed to outbox
         self.outbox.configure(state='normal')
         self.outbox.delete("0.0", tkinter.END)
         self.outbox.configure(state='disabled')
-        
+
         # route to backend
         self.backend._run([ paths[:4] ], paths[4], stdout=self.stdout)
-        
+
         # signal to user when all video processing is done
         self.stdout("DONE!")
 
@@ -2303,7 +2303,7 @@ class MultiObjBatchGUI(BaseBatchGUI):
     class to implement graphical user interface (GUI) for single object,
     multiple files video motion tracking
     '''
-    
+
     # help message to be displayed
     main_help = '''
     Graphical user interface (GUI) for multiple objects, multiple files video 
@@ -2491,18 +2491,18 @@ class MultiObjBatchGUI(BaseBatchGUI):
     NOTE that the order of operations is determined by the order at which
     the options are specified.
     '''
-    
+
     def __init__(self, config_file=None):
         '''
         initialize the main GUI after asking for the configuration file
         '''
-        
+
         from .batch import MultiObjBatch
-        
+
         # initialize GUI
         if root is None:
             reinitialize()
-        
+
         # choose configuration file
         if config_file is None:
             try:
@@ -2513,11 +2513,11 @@ class MultiObjBatchGUI(BaseBatchGUI):
                 config = None
         else:
             config = config_file
-        
+
         # initialize batch processor
         try:
             self.backend = MultiObjBatch(config)
-            
+
         # show info to user using appropriate message boxes
         except JSONDecodeError as e:
             tkinter.messagebox.showerror(
@@ -2535,31 +2535,31 @@ class MultiObjBatchGUI(BaseBatchGUI):
                     title="load_config", 
                     message="Configuration file loaded"
                 )
-                
+
         # initialize GUI
         self.start_frontend()
-    
+
     def start_frontend(self):
-        
+
         # reinitialize Tk root if none existed
         if root is None:
             reinitialize()
-        
+
         # create window for main GUI
         frontend = tkinter.Toplevel(master=root)
         frontend.title("Multiple Objects Batch Processing GUI")
-        
+
         # creating three organizing frames
         frm_config = tkinter.Frame(master=frontend)
         frm_files = tkinter.Frame(master=frontend)
         frm_prompt = tkinter.Frame(master=frontend)
-        
+
         # configure the grid of the first frame
         frm_config.columnconfigure(0, weight=0)
         frm_config.columnconfigure(1, weight=0)
         frm_config.columnconfigure(2, weight=0)
         frm_config.columnconfigure(3, weight=1)
-        
+
         # first frame: two rows of buttons
         btn_load_conf = tkinter.Button(
             master=frm_config, text="Load Config", width=12,
@@ -2599,11 +2599,11 @@ class MultiObjBatchGUI(BaseBatchGUI):
             command=self.start_set_GUI
         )
         btn_set_opt.grid(row=1, column=1, padx=3, pady=3)
-        
+
         # configure the grid of the second frame
         frm_files.columnconfigure(0, weight=0, minsize=150)
         frm_files.columnconfigure(1, weight=1, minsize=250)
-        
+
         # right of second frame (top): entry boxes
         entr_infolder = tkinter.Entry(master=frm_files)
         entr_infolder.grid(row=0, column=1, padx=5, pady=5, sticky="we")
@@ -2611,7 +2611,7 @@ class MultiObjBatchGUI(BaseBatchGUI):
         entr_outfolder.grid(row=1, column=1, padx=5, pady=5, sticky="we")
         entr_summary = tkinter.Entry(master=frm_files)
         entr_summary.grid(row=2, column=1, padx=5, pady=5, sticky="we")
-        
+
         # left of second frame (top): buttons
         btn_infolder = tkinter.Button(
             master=frm_files, text="Select Input Folder", width=20,
@@ -2640,7 +2640,7 @@ class MultiObjBatchGUI(BaseBatchGUI):
             )
         )
         btn_summary.grid(row=2, column=0, padx=5, pady=5)
-        
+
         # left of second frame (bottom): buttons
         lbl_inpattern = tkinter.Label(
             master=frm_files, text="Input Pattern:", width=20
@@ -2650,13 +2650,13 @@ class MultiObjBatchGUI(BaseBatchGUI):
             master=frm_files, text="Output Pattern:", width=20
         )
         lbl_outpattern.grid(row=4, column=0, padx=5, pady=5)
-        
+
         # right of second frame (bottom): entry boxes
         entr_inpattern = tkinter.Entry(master=frm_files)
         entr_inpattern.grid(row=3, column=1, padx=5, pady=5, sticky="we")
         entr_outpattern = tkinter.Entry(master=frm_files)
         entr_outpattern.grid(row=4, column=1, padx=5, pady=5, sticky="we")
-        
+
         # third frame: one label + entry box and two buttons
         lbl_nobj = tkinter.Label(
             master=frm_prompt, text="Number of foreground objects:", width=25
@@ -2679,33 +2679,33 @@ class MultiObjBatchGUI(BaseBatchGUI):
             command=self.kill_frontend
         )
         btn_exit.grid(row=0, column=3, padx=10, pady=5)
-        
+
         # implicit fourth frame: output text box
         outbox = tkinter.scrolledtext.ScrolledText(
             master=frontend, relief="ridge", width=80, height=5, 
             padx=5, pady=5, bg="white"
         )
         outbox.configure(state='disabled')
-        
+
         # pack the organizing frames to the windows
         frm_config.pack(fill=tkinter.BOTH, expand=False)
         frm_files.pack(fill=tkinter.BOTH, expand=False)
         frm_prompt.pack(fill=tkinter.BOTH, expand=False)
         outbox.pack(fill=tkinter.BOTH, expand=True)
-        
+
         # define protocol when user closed the GUI window
         frontend.protocol("WM_DELETE_WINDOW", self.kill_frontend)
-        
+
         # "launch" the main GUI
         frontend.geometry("640x480")
         frontend.update()
-        
+
         # make sure all sub-windows are initialized
         self.get_GUI = None
         self.set_GUI = None
         self.kill_get_GUI()
         self.kill_set_GUI()
-        
+
         # hook local variable to instance attributes
         self.frontend = frontend
         self.outbox = outbox
@@ -2717,16 +2717,16 @@ class MultiObjBatchGUI(BaseBatchGUI):
             "summary_name": entr_summary,
             "n_obj": entr_nobj
         }
-        
+
         # start main loop (must be last line!)
         root.mainloop()
-    
+
     def kill_frontend(self):
-        
+
         # make sure all children windows are closed
         self.kill_get_GUI()
         self.kill_set_GUI()
-        
+
         # reset instance attributes
         self.outbox = None
         self.entries = {
@@ -2740,23 +2740,23 @@ class MultiObjBatchGUI(BaseBatchGUI):
         if self.frontend is not None:
             self.frontend.destroy()
             self.frontend = None
-        
+
         # kill the current Tk mainloop
         terminate()
-    
+
     def stdout(self, data, *, position=tkinter.END, end="\n"):
-        
+
         self.outbox.configure(state='normal')
         self.outbox.insert(position, data + end)
         self.outbox.see(tkinter.END)
         self.outbox.configure(state='disabled')
         self.frontend.update()
-    
+
     def infer_options(self):
         '''
         set config values based on user's GUI input
         '''
-        
+
         # infer the value of n_obj in the "params" section
         raw = self.entries["n_obj"].get().strip()
         try:
@@ -2767,7 +2767,7 @@ class MultiObjBatchGUI(BaseBatchGUI):
                 message="Invalid number of foreground objects. No action taken"
             )
             raise e
-        
+
         if n_obj < 2:
             tkinter.messagebox.showerror(
                 title="RUN!", 
@@ -2779,26 +2779,26 @@ class MultiObjBatchGUI(BaseBatchGUI):
             raise ValueError("Invalid input")
         else:
             self.backend.config["params"]["n_obj"] = n_obj
-        
+
         # infer the value of summary in the "output" section
         raw = self.entries["summary_name"].get().strip()
         if raw:
             self.backend.config["output"]["summary"] = True
         else:
             self.backend.config["output"]["summary"] = False
-    
+
     def process(self):
-        
+
         # infer config settings from user input
         try:
             self.infer_options()
         except ValueError:
             return
-        
+
         # obtain (string) arguments from the GUI
         args = [ __.get().strip() for __ in self.entries.values() ]
         args = args[:5]
-        
+
         # check if input/output folders are specified
         if (not args[0]) or (not args[1]):
             tkinter.messagebox.showerror(
@@ -2809,20 +2809,20 @@ class MultiObjBatchGUI(BaseBatchGUI):
                 )
             )
             return
-        
+
         # convert empty strings to default values
         if not args[2]: args[2] = None
         if not args[3]: args[3] = None
         if not args[4]: args = args[:4]
-        
+
         # infer postprocessing from postprocess section of config
         self.backend.infer_post_ops(clear=True)
-        
+
         # clear previous texts printed to outbox
         self.outbox.configure(state='normal')
         self.outbox.delete("0.0", tkinter.END)
         self.outbox.configure(state='disabled')
-        
+
         # route operations to the backend
         self.backend(*args, stdout=self.stdout)
 
@@ -2835,9 +2835,9 @@ __all__ = [
 
 # allow the gui module to be run from command line
 if __name__=="__main__":
-    
+
     import argparse
-    
+
     parser = argparse.ArgumentParser(
         description='Batch Video Motion Processing'
     )
@@ -2851,9 +2851,9 @@ if __name__=="__main__":
     ))
     parser.add_argument('-c', '--config', default=None, 
         help='configuration .json file')
-    
+
     args = parser.parse_args()
-    
+
     mode = args.mode.lower()
     fmode = args.file.lower()
     if mode=="single":
@@ -2876,7 +2876,7 @@ if __name__=="__main__":
             )
     else:
         raise ValueError("unknown object detection mode {}".format(args.mode))
-    
+
     # keep the mainloop blocking
     while (gui.frontend is not None) and (root is not None):
         root.mainloop()

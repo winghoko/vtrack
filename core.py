@@ -136,11 +136,11 @@ def _peek_iterator(iterator):
     
     ARGUMENTS:
       iterator: iterator that needs to be peeked at
-      
+    
     RETURNS:
       elem: the first yield from the iterator
       out_iterator: an iterator that function as a copy of unconsumed iterator
-      
+    
     NOTES:
       both elem and the first yield of out_iterator points to the same object
       which can have side effects if elem is mutable!
@@ -148,7 +148,7 @@ def _peek_iterator(iterator):
     iterator = iter(iterator)
     elem = next(iterator)
     out_iterator = itertools.chain([ elem ], iterator)
-    
+
     return (elem, out_iterator)
 
 def build_from_iter(
@@ -174,7 +174,7 @@ def build_from_iter(
     '''
     # set cropbox
     row_slice, col_slice = cropbox_to_slices(cropbox)
-    
+
     # convert iterator to numpy array
     return np.array([ 
         __[row_slice, col_slice, ...] for __ in 
@@ -212,7 +212,7 @@ def build_grayscaled(
       it simply gets to the end and returns
     '''
     if isinstance(frames, np.ndarray):
-    
+
         # allocate output array and build it
         out = np.zeros_like(frames[start:stop:step,:,:,0], dtype=np.uint8)
         for i, raw in enumerate(frames[start:stop:step]):
@@ -220,7 +220,7 @@ def build_grayscaled(
                 raw
             ).crop(cropbox).convert("L", matrix=matrix)
         return out
-        
+
     else:
         return np.array([
             np.array(PIL.Image.fromarray(
@@ -286,7 +286,7 @@ def calc_background(
     '''
     # set cropbox
     row_slice, col_slice = cropbox_to_slices(cropbox)
-    
+
     # compute background frame
     if isinstance(frames, np.ndarray):
         return np.median(
@@ -333,7 +333,7 @@ def build_subtracted(
     '''
     # set cropbox
     row_slice, col_slice = cropbox_to_slices(cropbox)
-    
+
     # build output frame
     if isinstance(frames, np.ndarray):
         out_frames = frames[start:stop:step, row_slice, col_slice].copy()
@@ -342,7 +342,7 @@ def build_subtracted(
             __[row_slice, col_slice] for __ in 
             itertools.islice(frames, start, stop, step)
         ])
-    
+
     if background is None:
         # compute background frame if none supplied
         bg = calc_background(out_frames, sample_step)
@@ -351,11 +351,11 @@ def build_subtracted(
         bg = background if ( (cropbox is None) or (background.shape == (
             cropbox[3] - cropbox[1], cropbox[2] - cropbox[0]
         )) ) else background[row_slice, col_slice]
-    
+
     # compute and return subtracted frame
     for i, frame in enumerate(out_frames):
         out_frames[i] = np.abs(frame - bg).astype(np.uint8)
-    
+
     if background is None:
         return (out_frames, bg)
     else:
@@ -397,7 +397,7 @@ def iter_subtracted(
     bg = background if ( (cropbox is None) or (
         background.shape == (cropbox[3] - cropbox[1], cropbox[2] - cropbox[0])
     ) ) else background[cropbox_to_slices(cropbox)]
-    
+
     for frame in iter_grayscaled(reader, step, start, stop, cropbox, matrix):
         yield np.abs(frame - bg).astype(np.uint8)
 
@@ -414,7 +414,7 @@ def count_intensity(frames, step=1, start=0, stop=None, cropbox=None):
       stop: the upper index (exclusive) of frame to be read (if None, 
         continues until the reader object reaches end)
       cropbox: the cropbox (left, top, right, bottom) to crop the image to
-      
+    
     RETURNS:
       a 1-dim (len=256) numpy array
     '''
@@ -431,7 +431,7 @@ def count_intensity(frames, step=1, start=0, stop=None, cropbox=None):
             counts += np.bincount(
                 fr[row_slice, col_slice].ravel(), minlength=256
             )[:256]
-    
+
     return counts / np.sum(counts)
 
 def calc_threshold(frames, step=1, start=0, stop=None, cropbox=None):
@@ -453,7 +453,7 @@ def calc_threshold(frames, step=1, start=0, stop=None, cropbox=None):
     '''
     # set cropbox
     row_slice, col_slice = cropbox_to_slices(cropbox)
-    
+
     # compute threshold
     if isinstance(frames, np.ndarray):
         return skm.filters.threshold_otsu(
@@ -499,12 +499,12 @@ def build_thresholded(
     '''
     # set cropbox
     row_slice, col_slice = cropbox_to_slices(cropbox)
-    
+
     # compute threshold if needed
     thres = calc_threshold(
         frames, sample_step * step, start, stop, cropbox
     ) if (threshold is None) else threshold
-    
+
     if isinstance(frames, np.ndarray):
         if mask is None:
             out_frames = np.array(
@@ -525,7 +525,7 @@ def build_thresholded(
                 np.logical_and(__[row_slice, col_slice] > thres, mask) for
                 __ in itertools.islice(frames, start, stop, step)
             ])
-    
+
     # return the proper results
     if threshold is None:
         return (out_frames, thres)
@@ -574,7 +574,7 @@ def iter_thresholded(
             reader, background, step, start, stop, cropbox, matrix
         ):
             yield np.array(frame > threshold)
-        
+
     else:
         for frame in iter_subtracted(
             reader, background, step, start, stop, cropbox, matrix
@@ -608,17 +608,17 @@ def build_postprocessed(
       skimage.morphology module, which is mapped to the "morph" variable
       of this package for your convenience
     '''
-    
+
     # deal with the special case of no parameters
     if params is None:
         params = []
         params = [ params for __ in Ops ]
-    
+
     # deal with the special case of no keyword parameters
     if kwparams is None:
         kwparams = dict()
         kwparams = [ kwparams for __ in Ops ]
-    
+
     if isinstance(frames, np.ndarray):
         if in_place:
             new_frames = frames
@@ -628,7 +628,7 @@ def build_postprocessed(
         in_place = False
         frames = np.array([ __ for __ in frames ])
         new_frames = frames
-        
+
     for i, frame in enumerate(frames):
         for op, args, kwargs in zip(Ops, params, kwparams):
             frame = op(frame, *args, **kwargs)
@@ -684,17 +684,17 @@ def iter_postprocessed(reader, background, threshold, Ops,
         CROPPED frame, or must encompass the entire range of cropbox (if 
         cropbox is None it must have the same shape as the frames)
     '''
-    
+
     # deal with the special case of no parameters
     if params is None:
         params = []
         params = [ params for __ in Ops ]
-    
+
     # deal with the special case of no keyword parameters
     if kwparams is None:
         kwparams = dict()
         kwparams = [ kwparams for __ in Ops ]
-    
+
     for frame in iter_thresholded(
         reader, background, threshold, step, start, stop, cropbox, mask, matrix
     ):
@@ -719,17 +719,17 @@ def iter_postprocess(iterator, Ops, params=None, kwparams=None):
       skimage.morphology module, which is mapped to the "morph" variable
       of this package for your convenience
     '''
-    
+
     # deal with the special case of no parameters
     if params is None:
         params = []
         params = [ params for __ in Ops ]
-    
+
     # deal with the special case of no keyword parameters
     if kwparams is None:
         kwparams = dict()
         kwparams = [ kwparams for __ in Ops ]
-    
+
     for frame in iterator:
         for op, args, kwargs in zip(Ops, params, kwparams):
             frame = op(frame, *args, **kwargs)
@@ -770,19 +770,19 @@ def mark_image(
         received. Otherwise return whatever is received.
       message: message to display below the title (NOTE: message is passed
         the current try number and max_tries as .format() arguments)
-        
+    
     RETURNS:
       list of tuples of pixel coordinates
-      
+    
     NOTES:
       the convex option is helpful if the points represents a convex region, 
       since with convex=True the order of which the points are selected becomes
       immaterial
     '''
-    
+
     # create actual cmap from specification
     cmap = make_cmap(cmap)
-    
+
     # NOTE: for better interface, secretly asked for (num + 1) points, 
     # but throw out the coordinates of the last input
     real_num = num + 1
@@ -800,13 +800,13 @@ def mark_image(
     else: # else of for => no break
         if raise_error:
             raise ValueError("Unexpected number of pixel coordinates")
-    
+
     # filter and rearrange captured pixel coordinates if they 
     # represent a convex hull
     if convex and (len(points) > 2):
         hull = sp.spat.ConvexHull(points)
         points = [ points[__] for __ in hull.vertices ]
-        
+
     return points
 
 def vertices_to_cropbox(points, block_size=1):
@@ -818,20 +818,20 @@ def vertices_to_cropbox(points, block_size=1):
         of sequences (e.g., list of tuples)
       block_size: an integer for which the corners are required to be
         integer multiples of. Ignored if None
-        
+    
     RETURNS:
       a 4-tuple giving a PIL-style cropbox (left, top, right, bottom)
     '''
-    
+
     pt_min = np.floor(np.min(points,axis=0)).astype(int)
     pt_max = np.ceil(np.max(points,axis=0)).astype(int)
-    
+
     if block_size is not None:
         block_size = int(block_size) # defensive
         pt_min = (pt_min // block_size) * block_size
         q, r = np.divmod(pt_max, block_size)
         pt_max = (q + np.sign(r)) * block_size
-    
+
     return tuple(np.hstack([pt_min, pt_max]))
 
 def cropbox_to_slices(cropbox):
@@ -841,7 +841,7 @@ def cropbox_to_slices(cropbox):
     
     ARGUMENTS:
       cropbox: a PIL-style cropbox, which can be None
-        
+    
     RETURNS:
       a 2-tuple of python slice object, which can be used to subset 2-dim 
       numpy arrays
@@ -859,20 +859,20 @@ def cropbox_to_vertices(cropbox, px2real=1.0):
     '''
     convert a PIL-style cropbox in (left, top, right, bottom) pixel 
     coordinates to vertices of the corresponding rectangle
-
+    
     ARGUMENTS:
       cropbox: a PIL-style cropbox
       px2real: the conversion scale from pixel to physical unit. i.e., the 
         physical length that 1 pixel corresponds to
-        
+    
     RETURNS:
       a len=4 python list for which each element is a 2-tuple. Each 2-tuple
       corresponds to the (x, y) coordinates of a vertex, and the vertices 
       tranverse counterclockwise from (left, top)
     '''
-    
+
     cropbox = [ __ * px2real for __ in cropbox]
-    
+
     return [
         (cropbox[0], cropbox[1]), (cropbox[0], cropbox[3]), 
         (cropbox[2], cropbox[3]), (cropbox[2], cropbox[1])
@@ -895,22 +895,22 @@ def vertices_to_mask(points, *, image=None, cropbox=None):
     
     RETURN:
       a 2-dim bool numpy array of the same dimension of the cropped image
-      
+    
     NOTES:
       the order of vertices matter! e.g., 4 points may define a trapezium 
       or a "bow-tie" depending on order
     '''
-    
+
     if image is None and cropbox is None:
         raise ValueError("image can cropbox cannot both be None")
-    
+
     if cropbox is None:
         offset = (0, 0)
         shape = image.shape[:2]
     else:
         offset = (cropbox[0], cropbox[1])
         shape = (cropbox[3] - cropbox[1], cropbox[2] - cropbox[0])
-    
+
     # NOTE that skimage expects coordinates in row#, col# form,
     # which is OPPOSITE to the usual (x, y) form
     row_col = np.array([ 
@@ -935,16 +935,16 @@ def vertices_to_path(points, scale=1, offset=(0,0), closed=True):
     
     RETURN:
       a matplotlib path object
-      
+    
     NOTES:
       1/ the order of vertices matter! e.g., 4 points may define a trapezium 
         or a "bow-tie" depending on order
       2/ offset can if fact contain more component. In particular, it can be
         a PIL-style cropbox
     '''
-    
+
     points = [ scale * (np.array(__) - offset) for __ in points ]
-    
+
     if closed:
         return mpl.path.Path(points + [ points[0] ], closed=True)
     else:
@@ -962,7 +962,7 @@ def calc_pixel_to_phys(coords_px, len_phys):
     RETURNS:
       the pixel-to-physical unit conversion factor
     '''
-    
+
     len_px = sp.dist.euclidean(coords_px[0], coords_px[1])
     return len_phys / len_px
 
@@ -991,19 +991,19 @@ def convert_to_physical(points, px2real=1.0, offset=(0,0)):
     '''
     if offset is None:
         offset = (0, 0)
-    
+
     converter = mpl.transforms.Affine2D()
     converter = converter.translate(-offset[0], -offset[1]).scale(px2real)
-    
+
     if points is None:
         return converter
-    
+
     if isinstance(points, mpl.path.Path):
         return converter.transform_path(points)
-    
+
     if not isinstance(points, np.ndarray):
         points = np.array(points)
-    
+
     old_shape = points.shape
     return converter.transform(points.reshape(-1, 2)).reshape(old_shape)
 
@@ -1037,22 +1037,22 @@ def convert_to_pixel(points, px2real=1.0, offset=(0, 0), quantize=True):
     '''
     if offset is None:
         offset = (0, 0)
-    
+
     converter = mpl.transforms.Affine2D()
     converter = converter.scale(1/px2real).translate(offset[0], offset[1])
-    
+
     if points is None:
         return converter
-        
+
     if isinstance(points, mpl.path.Path):
         if quantize:
             return converter.transform_path(points).cleaned(snap=True)
         else:
             return converter.transform_path(points)
-    
+
     if not isinstance(points, np.ndarray):
         points = np.array(points)
-    
+
     old_shape = points.shape
     points = converter.transform(points.reshape(-1, 2)).reshape(old_shape)
     if quantize:
@@ -1065,7 +1065,7 @@ def convert_to_pixel(points, px2real=1.0, offset=(0, 0), quantize=True):
 def compute_centroids(frames):
     '''
     Compute the (intensity) centroid from the given frames
-        
+    
     ARGUMENTS:
       frames: 3-dim numpy array representing a sequence of images, with the 
         0th index being the sequence index; or an iterator yielding successive
@@ -1076,32 +1076,32 @@ def compute_centroids(frames):
         0th index being the sequence index
     '''
     if isinstance(frames, np.ndarray):
-        
+
         outarray = np.zeros( (frames.shape[0], 2), dtype=float )
-        
+
         for i, frame in enumerate(frames):
-            
+
             M = skm.measure.moments(frame, order=1)
             # x (horizontal, count from left)
             outarray[i,0] = M[0,1] / M[0,0] 
             # y (vertical, count from top)
             outarray[i,1] = M[1,0] / M[0,0] 
-    
+
     else:
-        
+
         outarray = np.zeros( (0,), dtype=float )
-        
+
         for frame in frames:
-            
+
             M = skm.measure.moments(frame, order=1)
             outarray = np.append(outarray, [
                 M[0,1] / M[0,0],
                 M[1,0] / M[0,0],
             ])
-        
+
         # reshape result
         outarray = np.reshape(outarray, (-1, 2))
-    
+
     return outarray
 
 def compute_n_centroids(
@@ -1110,7 +1110,7 @@ def compute_n_centroids(
     '''
     Compute the centroid from the given frames, assuming there are exactly 
     n objects
-        
+    
     ARGUMENTS:
       frames: 3-axes numpy array representing a sequence of images, with the 
         0th index being the sequence index; or an iterator yielding successive
@@ -1121,13 +1121,13 @@ def compute_n_centroids(
         as initial guess
       (**kwargs): remaining keyword arguments are passed to the 
         MiniBatchKMeans engine used to identify objects
-      
+    
     RETURNS:
       a sequence of (x_i, y_i) coordinates as 3-axes numpy array, with the
         0th axis being the sequence index, the 1st axis being the object 
         index, and the 2nd axis being the (x,y) index
     '''
-    
+
     def recall(X, n_clust, random_state):
         '''
         recall the last computed centroids
@@ -1138,7 +1138,7 @@ def compute_n_centroids(
             return skl.clust.kmeans_plusplus(
                 X, n_clust, random_state=random_state
             )
-    
+
     # initialize k-mean engine
     if reinitialize:
         engine = skl.clust.MiniBatchKMeans(n, compute_labels=False, **kwargs)
@@ -1146,45 +1146,45 @@ def compute_n_centroids(
         engine = skl.clust.MiniBatchKMeans(
             n, init=recall, compute_labels=False, **kwargs
         )
-    
+
     # main loop
     if isinstance(frames, np.ndarray):
-        
+
         # initialize output, initialize coordinates for matching
         outarray = np.zeros( (frames.shape[0], n, 2), dtype=float )
-        
+
         if reinitialize:
             old_coords = np.zeros((n, 2), dtype=float)
         else:
             features = np.vstack(frames[0].nonzero()).T
             old_coords, *_ = skl.clust.kmeans_plusplus(features, n)
-        
+
         for i, frame in enumerate(frames):
-            
+
             # array of (row, col) of "bright" pixels
             features = np.vstack(frame.nonzero()).T
-            
+
             # find the centroids via k-mean clustering
             engine.fit(features)
             new_coords = engine.cluster_centers_
-            
+
             # match coordinates from previous frame to current frame, 
             # assuming that pairwise same-label distance is to be minimized
             dist_pairs = sp.dist.cdist(old_coords, new_coords)
             assignment = sp.opt.linear_sum_assignment(dist_pairs)
-            
+
             # re-label centroids by matched label, and cache for next frame
             old_coords = new_coords[assignment[1], :]
-            
+
             # convert (row, col) pixel coordinates to (x, y) real coordinates
             # append result to out_array
             outarray[i,:,:] = old_coords[:,::-1]
-            
+
     else:
-        
+
         # initialize output, initialize coordinates for matching
         outarray = np.zeros( (0,), dtype=float )
-        
+
         # initialize guess
         if reinitialize:
             old_coords = np.zeros((n, 2), dtype=float)
@@ -1192,44 +1192,54 @@ def compute_n_centroids(
             init_frame, frames = _peek_iterator(frames)
             features = np.vstack(init_frame.nonzero()).T
             old_coords, *_ = skl.clust.kmeans_plusplus(features, n)
-        
+
         for i, frame in enumerate(frames):
-        
+
             # array of (row, col) of "bright" pixels
             features = np.vstack(frame.nonzero()).T
-            
+
             # find the centroids via k-mean clustering
             engine.fit(features)
             new_coords = engine.cluster_centers_
-            
+
             # match coordinates from previous frame to current frame, 
             # assuming that pairwise same-label distance is to be minimized
             dist_pairs = sp.dist.cdist(old_coords, new_coords)
             assignment = sp.opt.linear_sum_assignment(dist_pairs)
-            
+
             # re-label centroids by matched label, cache result for next frame
             old_coords = new_coords[assignment[1], :]
-            
+
             # convert (row, col) pixel coordinates to (x, y) real coordinates
             # append result to outarray
             outarray = np.append(outarray, old_coords[:,::-1])
-        
+
         # reshape result
         outarray = np.reshape(outarray, (-1, n, 2))
-    
+
     return outarray
 
 def calculate_motion(
-    coords, px2real=1.0, dt=1, *, offset=(0,0), incl_speed=True
+    coords, px2real=1.0, dt=1, pad_value=np.nan, *, 
+    offset=(0,0), t0=0, incl_speed=True
 ):
     '''
-    Compute velocity vector (and possibly speed) from coordinates
+    Compute motion (time, x and y coordinates, x and y velocities, and 
+    optionally speed) of object(s) from raw pixel coordinates
     
     ARGUMENTS:
-      coords: (2+n)-dim numpy array (n >=0) representing a sequence of 
-        coordinates, with the 0th index being the temporal index, and the last
-        index being the spatial-component (i.e., (x, y)) index
+      coords: (1+n+1)-dim numpy array (n >=0) representing a sequence of
+        coordinates, with the 0th axis being the temporal index, and the last
+        axis being the spatial-component (i.e., (x, y)) index
+      px2real: the conversion scale from pixel to physical unit. i.e., the 
+        physical length that 1 pixel corresponds to
       dt: time difference between successive coordinates
+      pad_value: the value to pad the last entries of velocity and speed in
+        the output array
+      offset: the offset of the origin of the physical coordinates relative
+        to the pixel coordinates, in *pixel* unit, in (x,y) convention. None
+        is treated as an alias of (0, 0)
+      t0: the initial time instant
       incl_speed: whether the speed is also computed
       
     RETURNS:
@@ -1242,15 +1252,31 @@ def calculate_motion(
     # translate offset
     if offset is None:
         offset = (0, 0)
-    
-    coords = (coords - np.array(offset)) * px2real
-    
-    vels = np.diff(coords, axis=0) / dt
-    if incl_speed:
-        speeds = np.linalg.norm(vels, axis=-1)
-        out_array = np.concatenate(
-            (coords, vels, np.expand_dims(speeds, -1)), axis=-1
-        )
+    offset = np.array(offset)
+
+    # reshape coords to unify 2-dim and (2+n)-dim cases
+    old_shape = coords.shape
+    coords = coords.reshape(old_shape[0], -1, old_shape[-1])
+
+    # allocate output array (reshape later)
+    inner_shape = 6 if incl_speed else 5
+    out_array = np.full((*coords.shape[:-1], inner_shape), pad_value)
+
+    for i in range(coords.shape[1]):
+
+        out_array[:,i,0] = np.arange(coords.shape[0]) * dt + t0
+
+        pos = (coords[:, i, :] - offset) * px2real
+        out_array[:, i, 1:3] = pos
+
+        vel = np.diff(pos, axis=0) / dt
+        out_array[:-1, i, 3:5] = vel
+        if incl_speed:
+            speeds = np.linalg.norm(vel, axis=-1)
+            out_array[:-1, i, 5] = speeds
+
+    # reshape to match input
+    out_array = out_array.reshape((*old_shape[:-1], inner_shape))
     return out_array
 
 def estimate_motion(
@@ -1258,7 +1284,7 @@ def estimate_motion(
     rm_nan=True, offset=(0,0), t0=0.0, incl_speed=True, rcond=None
 ):
     '''
-    Estimate positions and velocities of object(s) from raw physical 
+    Estimate positions and velocities of object(s) from raw pixel 
     coordinates via rolling simple linear least-square fit
     
     ARGUMENTS:
@@ -1324,19 +1350,20 @@ def estimate_motion(
 
         out_array[:,i,0] = np.arange(coords.shape[0]) * dt + t0
 
-        if rm_nan:
-            x_take = ~np.isnan(coords[j:j+window, i, 0])
-            y_take = ~np.isnan(coords[j:j+window, i, 1])
-
         for j in range(coords.shape[0] - window + 1):
+
+            if rm_nan:
+                x_take = ~np.isnan(coords[j:j+window, i, 0])
+                y_take = ~np.isnan(coords[j:j+window, i, 1])
+
             out_array[j+shift,i,1:5:2], *_ = np.linalg.lstsq(
-                Z[xtake,:], 
-                px2real * (coords[j:j+window, i, 0][xtake] - offset[0]),
+                Z[x_take,:], 
+                px2real * (coords[j:j+window, i, 0][x_take] - offset[0]),
                 rcond=rcond
             )
             out_array[j+shift,i,2:5:2], *_ = np.linalg.lstsq(
-                Z[ytake,:], 
-                px2real * (coords[j:j+window, i, 1][ytake] - offset[1]),
+                Z[y_take,:], 
+                px2real * (coords[j:j+window, i, 1][y_take] - offset[1]),
                 rcond=rcond
             )
 
@@ -1350,17 +1377,19 @@ def estimate_motion(
     return out_array
 
 def assemble_motion_data(
-    coords, dt=1, marked_region=None, pad_value=np.nan, smooth=True, *, 
-    window=5, t0=0.0, incl_speed=True, summary=True
+    coords, px2real=1, dt=1, marked_region=None, pad_value=np.nan, smooth=True, *, 
+    window=5, offset=(0,0), t0=0.0, incl_speed=True, summary=True
 ):
     '''
     Compute all motion-related data from given coordinates
     
     ARGUMENTS:
-      coords: 2- or 3-dim numpy array representing a time-series of coordinates
+      coords: 2- or 3-axes numpy array representing a time-series of coordinates
         of n objects, with the 0th index being the time-series index, the
         1st index being the object index, and the 2nd index being the spatial
-        axes (x, y) index
+        coordinates (x, y) index
+      px2real: the conversion scale from pixel to physical unit. i.e., the 
+        physical length that 1 pixel corresponds to
       dt: time difference between successive coordinates
       marked_region: a region of interest (ROI) for which occupation is 
         checked if None assumes no such region
@@ -1368,13 +1397,16 @@ def assemble_motion_data(
       smooth: whether to smoothen the raw coordinates in computing the motion
       window: the size of (rectangular) rolling window used to compute the
         smoothen motion. Relevant only if smooth is True
+      offset: the offset of the origin of the physical coordinates relative
+        to the pixel coordinates, in *pixel* unit, in (x,y) convention. None
+        is treated as an alias of (0, 0)
       t0: the initial time instant
       incl_speed: whether the speed is also computed
       summary: whether summary data is also returned
-      
+    
     RETURNS:
       a 2-tuple if summary is False (a 3-tuple otherwise), consisting of:
-      1/ a 2- or 3-dim numpy array, where indices except last align with
+      1/ a 2- or 3-axes numpy array, where indices except last align with
         that of the input coords array, and the last index consist of motion
         data in the following order:
         t: time points
@@ -1394,61 +1426,52 @@ def assemble_motion_data(
           .distance: total distance traveled [ = np.nan if incl_speed is False]
           .proportion: proportion time spent in region of interest 
             [ = np.nan if marked_region is None]
-          
+    
     NOTES: if smooth is False the velocities computation is routed to 
       calculate_motion(). If smooth is True the position and velocity 
       computation is routed to estimate_motion()
     '''
-    
+
     if smooth:
         outarray = estimate_motion(
-            coords, dt, window, pad_value, t0=t0, incl_speed=incl_speed
+            coords, px2real, dt, window, pad_value, 
+            offset=offset, t0=t0, incl_speed=incl_speed
         )
         head = window // 2
         tail = coords.shape[0] - head
         v_tail = tail
-        
+
     else:
-        
-        # time points
-        t_array = np.multiply.outer(
-            np.arange(len(coords)) * dt + t0, 
-            np.ones((*coords.shape[1:-1], 1))
+
+        outarray = calculate_motion(
+            coords, px2real, dt, pad_value, 
+            offset=offset, t0=t0, incl_speed=incl_speed
         )
-        
-        # velocity and speed, with last entry padded
-        vels = compute_velocities(coords, dt, also_speed=incl_speed)
-        vels = np.append(
-            vels, np.full( (1, *vels.shape[1:]), pad_value), axis=0
-        )
-        
-        outarray = np.concatenate( (t_array, coords, vels), axis=-1 )
         head = 0
         tail = coords.shape[0]
         v_tail = tail - 1
-        
+
     # header output
     header = ["t{}", "x{}", "y{}", "v{}_x", "v{}_y"]
     if incl_speed: header.append("v{}")
-    
+
     if marked_region is not None:
-        
+
         # containment flag
         in_region = np.expand_dims(
             np.apply_along_axis(
                 marked_region.contains_point, -1, outarray[..., 1:3]
             ), -1
         )
-        
+
         # build output array
         outarray = np.concatenate((outarray, in_region), axis=-1)
-        if smooth:
-            outarray[:head, ..., -1] = pad_value
-            outarray[tail:, ..., -1] = pad_value
-        
+        outarray[:head, ..., -1] = pad_value
+        outarray[tail:, ..., -1] = pad_value
+
         # append to header
         header.append("in{}")
-    
+
     # convert header template to actual header
     if coords.ndim == 2:
         header = [ __.format("") for __ in header]
@@ -1457,18 +1480,18 @@ def assemble_motion_data(
         header = [ 
             [__.format(i) for __ in header] for i in range(1, n_obj + 1) 
         ]
-    
+
     if summary:
-        
+
         # find distance and proportion in ROI for all objects
         dist = np.sum(outarray[head:v_tail,...,5], axis=0) * dt if (
             incl_speed
-        ) else np.sum(np.full(vels.shape[1:], np.nan), axis=-1)
-        
+        ) else np.sum(np.full(coords.shape[1:], np.nan), axis=-1)
+
         prop = np.sum(in_region[head:tail,...,0],axis=0)/(tail - head) if (
             marked_region is not None
             ) else np.sum(np.full(coords.shape[1:], np.nan), axis=-1)
-        
+
         # pack into MotionSummary named tuples
         if coords.ndim == 2:
             summarized = MotionSummary(dist, prop)
@@ -1476,9 +1499,9 @@ def assemble_motion_data(
             summarized = [ 
                 MotionSummary(_1, _2) for _1, _2 in zip(dist, prop)
             ]
-        
+
         return (outarray, header, summarized)
-    
+
     else:
         return (outarray, header)
 
@@ -1496,20 +1519,20 @@ def detect_slowness(time, speed, speed_ubound, time_lbound, *, details=True):
       time_lbound: the lower bound of time above which the object is 
         considered prolongedly slow
       details: whether to create detailed outputs
-      
+    
     RETURNS:
       if details is True: a 2-dim numpy array, with the 0th index being
       index of occurrences and 1st index follows the order of [start_time, 
       end_time, duration]
       if details is False: a 1-dim numpy array of the duration of prolonged
       slowness
-      
+    
     NOTES:
       expects the time and speed array to be of same length, but disregard
       the last data point in speed, in agreement with the output of
       assemble_motion_data()
     '''
-    
+
     # idea: first create bool array indicating when speed is below upper bound
     # the diff of that array is an array of "trigger", where 1 indicates
     # onset of slowness and -1 indicates offset of slowness
@@ -1517,11 +1540,11 @@ def detect_slowness(time, speed, speed_ubound, time_lbound, *, details=True):
     diff_array[1:] = np.diff(np.array(speed < speed_ubound, dtype=int))
     if speed[0] < speed_ubound: diff_array[0] = 1 
     diff_array[-1] = -1 if (speed[-2] < speed_ubound) else 0
-    
+
     start = time[np.nonzero(diff_array==1)]
     end = time[np.nonzero(diff_array==-1)]
     duration = end - start
-    
+
     if details:
         out = np.transpose(np.array([start, end, duration]))
         return out[duration > time_lbound, :]
@@ -1581,25 +1604,25 @@ def make_cmap(spec, *, name="custom_cmap"):
     '''
     if isinstance(spec, mpl.colors.Colormap):
         return spec
-    
+
     if isinstance(spec, list) or isinstance(spec, tuple):
-        
+
         if all( isinstance(__, str) for __ in spec ):
             return mpl.colors.LinearSegmentedColormap.from_list(name, spec)
-        
+
         else:
             if isinstance(spec[0], mpl.colors.Colormap):
                 base_cmap = spec[0]
             else:
                 base_cmap = plt.get_cmap(spec[0])
-            
+
             start = float(spec[1])
             stop = float(spec[2])
-            
+
             return mpl.colors.LinearSegmentedColormap.from_list(
                 name, base_cmap(np.linspace(start, stop, 256))
             )
-    
+
     if isinstance(spec, str):
         try:
             return  plt.get_cmap(spec)
@@ -1607,7 +1630,7 @@ def make_cmap(spec, *, name="custom_cmap"):
             return mpl.colors.LinearSegmentedColormap.from_list(
                 name, [spec, spec]
             )
-    
+
     raise ValueError("invalid cmap specification")
 
 def overlay_path(
@@ -1659,50 +1682,50 @@ def overlay_path(
       2/ offset can if fact contain more component. In particular, it can be
         a PIL-style cropbox
     '''
-    
+
     # create actual cmap from specification
     cmap = make_cmap(cmap)
-    
+
     # collapse the aliases for matplotlib options
     fc = facecolor if (fc is None) else fc
     ec = edgecolor if (ec is None) else ec
     ls = linestyle if (ls is None) else ls
     lw = linewidth if (lw is None) else lw
-    
+
     # convert linewidth to unit of pixel
     if lw is not None:
         lw = lw * 72
-    
+
     # attempt to convert path to mpl path if not already such
     if not isinstance(points, mpl.path.Path):
         path = vertices_to_path(points, scale = 1/px2real, closed=closed)
     else: # scale the path from physical to pixel coordinates
         transform = mpl.transforms.Affine2D().scale(1/px2real)
         path = points.transformed(transform)
-    
+
     # translate the path by offset
     transform = mpl.transforms.Affine2D().translate(offset[0], offset[1])
     path = path.transformed(transform)
-    
+
     # initialize a figure object outside of pyplot
     size = (im_array.shape[1], im_array.shape[0])
     fig = mpl.figure.Figure(figsize=size, dpi=1)
     canvas = mpl.backends.backend_agg.FigureCanvas(fig)
-    
+
     # create Axes (plot area) the same size as the figure
     ax = fig.subplots()
     ax.set_position([0, 0, 1, 1], which='both')
-    
+
     # place the image and the overlay
     ax.imshow(im_array, cmap=cmap)
     ax.set_axis_off()
     patch = mpl.patches.PathPatch(path, fc=fc, ec=ec, ls=ls, lw=lw, **kwargs)
     ax.add_patch(patch)
-    
+
     # convert to (RGBA uint8) numpy array 
     canvas.draw()
     out = np.array(canvas.renderer.buffer_rgba())
-    
+
     # color mode conversion and output
     colorspace = colorspace.upper()
     if colorspace=="RGBA":
@@ -1749,29 +1772,29 @@ def overlay_coords(
     # interpret radius is it is a float < 1
     if radius < 1:
         radius = max(1, int(radius * min(im_array.shape)))
-    
+
     # interpret color
     if type(color)==str:
         color = np.array(PIL.ImageColor.getrgb(color))
     else:
         np.array(color)
-    
+
     # convert im_array to RGB color-space
     if im_array.dtype==bool:
         im_array = 255 * im_array.astype(np.uint8)
     if im_array.ndim < 3:
         im_array = skm.color.gray2rgb(im_array)
-    
+
     # find the pixels that need to be modified
     # NOTE: the ::-1 is needed to convert (x,y) to (row, col) coords
     center = np.rint(coords / px2real + offset[:2]).astype(int)
     rr, cc = skm.draw.disk(center[::-1], radius, shape=im_array.shape[:2])
-    
+
     # modified the said pixels
     im_array[rr, cc] = (
         im_array[rr, cc] * (1 - opacity) + opacity * color
     ).astype(np.uint8)
-    
+
     return im_array
 
 def export_overlaid_video(
@@ -1821,13 +1844,13 @@ def export_overlaid_video(
     '''
     # make offset efficient
     offset = np.array(offset[:2])
-    
+
     # resolve named colors
     if type(color)==str:
         color = np.array(PIL.ImageColor.getrgb(color))
     else:
         color = np.array(color)
-    
+
     # initialize trail related information
     if trail:
         if trail_mask is None:
@@ -1838,24 +1861,24 @@ def export_overlaid_video(
             trail_color = np.array(trail_color)
         trail_rr = np.zeros( (0,), dtype=int)
         trail_cc = np.zeros( (0,), dtype=int)
-        
+
     writer = imageio.get_writer(filename, **kwargs)
-    
+
     old_pixel = None
     for frame, coords in zip(frames, coords_array):
-        
+
         # convert frame to RGB color
         if frame.dtype==bool:
             frame = 255 * frame.astype(np.uint8)
         if frame.ndim < 3:
             frame = skm.color.gray2rgb(frame)
-        
+
         # cache the shape of the frame
         shape = frame.shape[:2]
-        
+
         # sidestep any nan's
         if np.any(np.isnan(coords[:2])):
-            
+
             # overlay existing trail to image
             if trail:
                 old_pixel = None
@@ -1863,38 +1886,38 @@ def export_overlaid_video(
                     frame[trail_rr, trail_cc] * (1 - trail_opacity) + 
                     trail_opacity * trail_color
                 ).astype(np.uint8)
-            
+
             writer.append_data(frame)
             continue
-        
+
         # pixel coordinate of object location
         # NOTE: the ::-1 is needed to convert (x,y) to (row, col) coords
         pixel = np.rint(coords / px2real + offset).astype(int)[::-1]
-        
+
         if trail:
-        
+
             # update trail if there is a previous known position
             if old_pixel is not None:
                 rr, cc = skm.draw.line(*old_pixel, *pixel)
                 for (x, y) in trail_mask:
                     trail_rr = np.append(trail_rr, rr + y)
                     trail_cc = np.append(trail_cc, cc + x)
-            
+
             # overlay trail to image
             frame[trail_rr, trail_cc] = (
                 frame[trail_rr, trail_cc] * (1 - trail_opacity) + 
                 trail_opacity * trail_color
             ).astype(np.uint8)
-        
+
         # overlay current position to image
         rr, cc = skm.draw.disk(pixel, radius, shape=shape)
         frame[rr, cc] = (
             frame[rr, cc] * (1 - opacity) + opacity * color
         ).astype(np.uint8)
-        
+
         writer.append_data(frame)
         old_pixel = pixel # store last pixel coordinates
-    
+
     writer.close()
 
 def export_overlaid_n_video(
@@ -1955,10 +1978,10 @@ def export_overlaid_n_video(
     '''
     # identify number of objects
     n_obj = coords_array.shape[1]
-    
+
     # make offset efficient
     offset = np.array(offset[:2])
-    
+
     # resolve colors (str -> np.array and scalar -> list)
     if type(colors)==str:
         colors = [ np.array(PIL.ImageColor.getrgb(colors)) ]
@@ -1968,13 +1991,13 @@ def export_overlaid_n_video(
         colors = [ np.array( 
             (PIL.ImageColor.getrgb(__) if (type(__)==str) else __) 
         ) for __ in colors ]
-        
+
     # resolve radii into list
     try:
         iter(radii)
     except TypeError:
         radii = [ radii ]
-    
+
     # initialize trail related information
     if trails:
         if trail_mask is None:
@@ -1991,30 +2014,30 @@ def export_overlaid_n_video(
         trails_cc = [ np.zeros( (0,), dtype=int) ] * n_obj
     else:
         trail_colors = [ None ] # dummy value
-    
+
     writer = imageio.get_writer(filename, **kwargs)
-    
+
     old_pixels = [ None ] * n_obj
     for frame, coords_n in zip(frames, coords_array):
-        
+
         # convert frame to RGB color
         if frame.dtype==bool:
             frame = 255 * frame.astype(np.uint8)
         if frame.ndim < 3:
             frame = skm.color.gray2rgb(frame)
-        
+
         # cache the shape of the frame
         shape = frame.shape[:2]
-        
+
         for i, (coords, color, radius, trail_color, old_pixel) in enumerate(
             zip(
                 coords_n, itertools.cycle(colors), itertools.cycle(radii), 
                 itertools.cycle(trail_colors), old_pixels
         )):
-            
+
             # sidestep any nan's
             if np.any(np.isnan(coords[:2])):
-                
+
                 # overlay existing trails to image
                 old_pixels[i] = None
                 if trails:
@@ -2024,14 +2047,14 @@ def export_overlaid_n_video(
                         frame[trail_rr, trail_cc] * (1 - trail_opacity) + 
                         trail_opacity * trail_color
                     ).astype(np.uint8)
-                
+
                 continue
-            
+
             # pixel coordinate of object location
             pixel = np.rint(coords / px2real + offset).astype(int)[::-1]
 
             if trails:
-                
+
                 # update trails if there is a previous known position
                 if old_pixel is not None:
                     rr, cc = skm.draw.line(*old_pixel, *pixel)
@@ -2043,25 +2066,25 @@ def export_overlaid_n_video(
                 else:
                     trail_rr = trails_rr[i]
                     trail_cc = trails_cc[i]
-                
+
                 # overlay trail to image
                 frame[trail_rr, trail_cc] = (
                     frame[trail_rr, trail_cc] * (1 - trail_opacity) + 
                     trail_opacity * trail_color
                 ).astype(np.uint8)
-                
+
             # update old_pixels 
             # this line must be OUTSIDE the old_pixel conditional...
             old_pixels[i] = pixel
-            
+
             # overlay current position to image
             rr, cc = skm.draw.disk(pixel, radius, shape=shape)
             frame[rr, cc] = (
                 frame[rr, cc] * (1 - opacity) + opacity * color
             ).astype(np.uint8)
-        
+
         writer.append_data(frame)
-    
+
     writer.close()
 
 def export_video(filename, frames, **kwargs):
@@ -2079,16 +2102,16 @@ def export_video(filename, frames, **kwargs):
     
     SIDE EFFECT: data from frames written to file named filename
     '''
-    
+
     writer = imageio.get_writer(filename, **kwargs)
-    
+
     # extract dtype of frames (peek into first frame if needed)
     try:
         dtype = frames.dtype
     except AttributeError:
         frame0, frames = _peek_iterator(frames)
         dtype = frame0.dtype
-    
+
     if dtype==np.uint8: # no conversion needed
         for im in frames:
             writer.append_data(im)
@@ -2098,7 +2121,7 @@ def export_video(filename, frames, **kwargs):
     else: # fallback: blindly convert to uint8
         for im in frames:
             writer.append_data(im.astype("uint8"))
-    
+
     writer.close()
 
 def export_image(filename, frame, mode=None, **kwargs):
@@ -2112,7 +2135,7 @@ def export_image(filename, frame, mode=None, **kwargs):
       mode: PIL image mode to use (automatically determined if None)
       (**kwargs): all remaining keyword arguments are passed to the 
         PIL's .save() function
-      
+    
     RETURNS None
     
     SIDE EFFECT: data from frame written to file named filename
@@ -2124,7 +2147,7 @@ def export_image(filename, frame, mode=None, **kwargs):
         frame = 255 * frame.astype("uint8")
     else: # fallback: blindly convert to uint8
         frame = frame.astype("uint8")
-    
+
     img = PIL.Image.fromarray(frame, mode=mode)
     img.save(filename, **kwargs)
 
@@ -2138,12 +2161,12 @@ def write_csv(filename, data, header=None):
         to rows (columns) in csv
       header: the header row for the csv as a sequence (e.g. list); if None
         no header row is written
-      
+    
     RETURNS None
     
     SIDE EFFECTS: data written to file named filename
     '''
-    
+
     with open(filename, "w", newline='') as outfile:
         csv_writer = csv.writer(outfile)
         if header is not None:
@@ -2169,7 +2192,7 @@ def read_csv(filename, header=True, skip=0, parser=None, processor=None):
         if None, the parsed and assembled row are assemble into an outer list
         if callable, each row is passed to the processor and the result
         is assembled into an outer list
-        
+    
       RETURNS:
         if processor is None, a list of list representing the bulk of the 
         content in the csv file; if processor is not None the inner list 
@@ -2177,17 +2200,17 @@ def read_csv(filename, header=True, skip=0, parser=None, processor=None):
         if header is True, an additional python list consisting of the entry
         in the header row
     '''
-    
+
     out_table = []
     with open(filename, "r") as infile:
-        
+
         # use manual next() to advance rows
         csv_reader = csv.reader(infile)
         if header: 
             header_row = next(csv_reader)
         for row in range(skip): 
             next(csv_reader)
-        
+
         # keep the for loop out of conditional for performance's sake
         if parser is None:
             if processor is None:
@@ -2203,7 +2226,7 @@ def read_csv(filename, header=True, skip=0, parser=None, processor=None):
             else:
                 for row in csv_reader:
                     out_table.append(processor([parser(__) for __ in row]))
-    
+
     if header:
         return (out_table, header_row)
     else:
@@ -2255,10 +2278,10 @@ def plot_path(
       if save_as is not None an image file is saved
       depending on matplotlib backend the plot may be displayed
     '''
-    
+
     # convert cmap specification to actual cmap
     cmap = make_cmap(cmap)
-    
+
     # instantize height_ratios and set last index appropriately
     if info_list is None:
         # plot as vertical stack of 2 subfigures (axes objects)
@@ -2274,7 +2297,7 @@ def plot_path(
             nrows=3, figsize=figsize, constrained_layout=True,
             gridspec_kw={"height_ratios": height_ratios}
         )
-    
+
     # first subfig is the plot of path in 2D space
     if x_lim is not None:
         ax1.set_xlim(*x_lim)
@@ -2286,15 +2309,15 @@ def plot_path(
     ax1.tick_params(axis='both', which='major', labelsize=fontsizes[2])
     ax1.set_xlabel(x_label, fontsize=fontsizes[1])
     ax1.set_ylabel(y_label, fontsize=fontsizes[1])
-    
+
     # include region of interest as dotted lines
     if region is not None:
         patch = mpl.patches.PathPatch(region, fc='none', ls=":", lw=2)
         ax1.add_patch(patch)
-    
+
     # plot the path in solid lines
     ax1.plot(coords[:,0], coords[:,1], "k-")
-    
+
     # plot coordinates at time points as points of varying colors
     c_array = cmap(np.linspace(0, 1, len(coords)))
     ax1.scatter(coords[:,0], coords[:,1], c=c_array)
@@ -2316,7 +2339,7 @@ def plot_path(
     ax2.axes.xaxis.set_visible(True)
     ax2.axes.yaxis.set_visible(False)
     ax2.set_xlabel(t_label, fontsize=fontsizes[1])
-    
+
     # third subfig prints the information from info_list
     if info_list is not None:
         ax3.set_axis_off()
@@ -2325,11 +2348,11 @@ def plot_path(
         ax3.invert_yaxis()
         for (i, entry) in enumerate(info_list):
             ax3.text(0, i, entry, ha="left", fontsize=fontsizes[1])
-    
+
     # save figure if asked
     if save_as is not None:
         fig.savefig(save_as, bbox_inches = 'tight')
-    
+
     # close if asked
     if close:
         plt.close()
@@ -2401,7 +2424,7 @@ def plot_n_paths(
       depending on matplotlib backend the plot may be displayed
     '''
     n_obj = coords.shape[1]
-    
+
     # duplicate colormaps if only one is given
     # try to convert color-like to cmap if needed
     if isinstance(cmaps, list) or isinstance(cmaps, tuple):
@@ -2417,7 +2440,7 @@ def plot_n_paths(
     else:
         cmaps = [ make_cmap(cmaps) ]
         multi_cmap = False
-    
+
     # duplicate line color if only one is given
     if mpl.colors.is_color_like(linecolors):
         linecolors = [ linecolors ]
@@ -2427,7 +2450,7 @@ def plot_n_paths(
             multi_lc = False
         else:
             multi_lc = True
-        
+
     # duplicate markers if only one is given
     if isinstance(markers, list) or isinstance(markers, tuple):
         if len(markers) == 1:
@@ -2437,11 +2460,11 @@ def plot_n_paths(
     else:
         markers = [ markers ]
         multi_markers = False
-    
+
     # create all labels if only a template string is given
     if isinstance(obj_labels, str):
         obj_labels = [ obj_labels.format(i) for i in range(1, n_obj+1) ]
-    
+
     # instantize height_ratios and set last index appropriately
     if info_list is None:
         # plot as vertical stack of 2 subfigures (axes objects)
@@ -2457,10 +2480,10 @@ def plot_n_paths(
             nrows=3, figsize=figsize, constrained_layout=True,
             gridspec_kw={"height_ratios": height_ratios}
         )
-    
+
     # title of the entire plot
     fig.suptitle(title, fontsize=fontsizes[0])
-    
+
     # first subfig is the plot of paths in 2D space
     if x_lim is not None:
         ax1.set_xlim(*x_lim)
@@ -2471,12 +2494,12 @@ def plot_n_paths(
     ax1.tick_params(axis='both', which='major', labelsize=fontsizes[2])
     ax1.set_xlabel(x_label, fontsize=fontsizes[1])
     ax1.set_ylabel(y_label, fontsize=fontsizes[1])
-    
+
     # include region of interest as dotted lines
     if region is not None:
         patch = mpl.patches.PathPatch(region, fc='none', ls=":", lw=2)
         ax1.add_patch(patch)
-    
+
     # for each object, plot the path in solid lines
     for i, cmap, color, mark, label in zip(
         range(n_obj), itertools.cycle(cmaps), itertools.cycle(linecolors),
@@ -2485,10 +2508,10 @@ def plot_n_paths(
         c_array = cmap(np.linspace(0, 1, len(coords)))
         ax1.plot(coords[:,i,0], coords[:,i,1], color=color, label=label)
         ax1.scatter(coords[:,i,0], coords[:,i,1], c=c_array, marker=mark)
-    
+
     # plot the legend if the linecolor or marker is distinct for each object
     if multi_lc or multi_markers:
-        
+
         legend_handles = []
         for i, cmap, color, mark, label in zip(
             range(n_obj), itertools.cycle(cmaps), itertools.cycle(linecolors),
@@ -2498,16 +2521,16 @@ def plot_n_paths(
                     [0], [0], color=color, marker=mark,
                     mfc=cmap(0.5), mec="none", label=label
             ))
-        
+
         ax1.legend(
             handles=legend_handles,
             loc='upper center', bbox_to_anchor=(0.5, 1.15), 
             ncol=n_obj, fontsize=fontsizes[2]
         )
-    
+
     # second subfig is a strip to illustrate color map of time points
     c_strip = np.tile(np.linspace(0, 1, 256), 2).reshape((2, -1))
-    
+
     # set x-axis depending on whether t_range is specified
     ax2.axes.xaxis.set_visible(True)
     ax2.set_xlabel(t_label, fontsize=fontsizes[1])
@@ -2519,33 +2542,33 @@ def plot_n_paths(
     else:
         extent_base = [t_range[0], t_range[1], 0, 1]
         ax2.tick_params(axis='x', which='major', labelsize=fontsizes[2])
-    
+
     # set y-axis depending on whether there are distinct colormaps
     ax2.set_ylim([0, 1])
     ax2.invert_yaxis()
     if multi_cmap: # distinct colormap for each object
-    
+
         # draw one strip for each object
         for i, cmap in zip(range(n_obj), itertools.cycle(cmaps)):
             extent = [ __ for __ in extent_base ]
             extent[2] = i / n_obj + 1 / (4 * n_obj)
             extent[3] = (i + 1)/ n_obj
             ax2.imshow(c_strip, aspect='auto', extent=extent, cmap=cmap)
-            
+
         # use y-axis to display labels of objects
         ax2.axes.yaxis.set_visible(True)
         ax2.set_yticks([(8*i+5)/(8*n_obj) for i in range(n_obj)])
         ax2.set_yticklabels(obj_labels)
         ax2.tick_params(axis='y', which='major', labelsize=fontsizes[2])
-    
+
     else: # same colormap for all objects => hide y-axis
         ax2.imshow(c_strip, aspect='auto', extent=extent_base, cmap=cmap)
         ax2.axes.yaxis.set_visible(False)
-    
+
     # remove "spines" (frame) from the second plot
     for direction in ["left", "right", "top", "bottom"]:
         ax2.spines[direction].set_visible(False)
-    
+
     # third subfig prints the information from info_list
     if info_list is not None:
         ax3.set_axis_off()
@@ -2554,11 +2577,11 @@ def plot_n_paths(
         ax3.invert_yaxis()
         for (i, entry) in enumerate(info_list):
             ax3.text(0, i, entry, ha="left", fontsize=fontsizes[1])
-    
+
     # save figure if asked
     if save_as is not None:
         fig.savefig(save_as, bbox_inches = 'tight')
-    
+
     # close if asked
     if close:
         plt.close()
